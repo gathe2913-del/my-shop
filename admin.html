@@ -3,151 +3,121 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>浮光 Floating | 員工後台管理系統</title>
-  <!-- Tailwind CSS -->
+  <title>浮光 Floating | 員工核心核銷與數據矩陣</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Font Awesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <!-- HTML5 QR Code Scanner -->
   <script src="https://unpkg.com/html5-qrcode"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Playfair+Display:wght@600&display=swap');
-    body { font-family: 'Noto Sans TC', sans-serif; background-color: #f4f5f7; color: #333; }
-    .font-serif-luxury { font-family: 'Playfair Display', serif; }
+    body { font-family: 'Noto Sans TC', sans-serif; background-color: #f4f5f7; }
     .tab-content { display: none; }
     .tab-content.active { display: block; }
   </style>
 </head>
 <body class="min-h-screen flex flex-col">
 
-  <!-- 全局動態加載遮罩 -->
   <div id="admin-loader" class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-900/80 text-white transition-opacity duration-300">
     <div class="w-10 h-10 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-    <p class="text-sm tracking-widest text-slate-300 animate-pulse">正在同步試算表大數據...</p>
+    <p class="text-sm tracking-widest text-slate-300">正在變更並發送操作至審計 Log 矩陣...</p>
   </div>
 
-  <!-- 頂部管理列 -->
-  <header class="bg-slate-800 text-white px-6 py-4 flex flex-col sm:flex-row justify-between items-center shadow-md shrink-0">
+  <header class="bg-slate-800 text-white px-6 py-4 flex flex-col sm:flex-row justify-between items-center shadow-md">
     <div class="flex items-center space-x-3 mb-2 sm:mb-0">
       <i class="fa-solid fa-screwdriver-wrench text-amber-500 text-xl"></i>
       <div>
-        <h1 class="font-medium tracking-wide text-md">浮光 Floating | 核心運營管理後台</h1>
-        <p class="text-[10px] text-slate-400 font-mono">GAS Data Hub Sync Engine v2.6 (Fixed)</p>
+        <h1 id="brand-title" class="font-medium tracking-wide text-md">浮光 Floating | 核心運營管理後台</h1>
+        <p class="text-[10px] text-slate-400 font-mono">Audit Log & User Permission Guard v3.0</p>
       </div>
     </div>
-    <button onclick="toggleScannerModal()" class="bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold px-4 py-2 rounded-lg flex items-center space-x-2 shadow transition-colors">
-      <i class="fa-solid fa-camera text-sm"></i>
-      <span>開啟相機掃描核銷</span>
-    </button>
+    
+    <div class="flex items-center space-x-2 bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-700">
+      <i class="fa-solid fa-user-shield text-amber-500 text-xs"></i>
+      <span class="text-xs text-slate-400">登入店員工號:</span>
+      <input type="text" id="operator-id" placeholder="例如 SS123" class="bg-slate-800 text-amber-400 text-xs font-mono font-bold rounded px-2 py-0.5 w-20 border border-slate-600 focus:outline-none focus:border-amber-500 text-center">
+    </div>
   </header>
 
-  <!-- 功能頁籤切換 -->
-  <div class="bg-white border-b border-slate-200 shadow-sm flex">
-    <button onclick="switchTab('orders-tab')" id="btn-orders-tab" class="px-6 py-3.5 text-sm font-medium border-b-2 border-amber-600 text-amber-600 transition-all flex items-center space-x-2">
-      <i class="fa-solid fa-list-check"></i> <span>預訂訂單管理</span>
+  <div class="bg-white border-b border-slate-200 flex shadow-sm">
+    <button onclick="switchTab('orders-tab')" id="btn-orders-tab" class="px-6 py-3.5 text-sm font-medium border-b-2 border-amber-600 text-amber-600 flex items-center space-x-2">
+      <i class="fa-solid fa-list-check"></i> <span>Order_Log 訂單核銷作業</span>
     </button>
-    <button onclick="switchTab('products-tab')" id="btn-products-tab" class="px-6 py-3.5 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition-all flex items-center space-x-2">
-      <i class="fa-solid fa-box-archive"></i> <span>商品上架與庫存維護</span>
+    <button onclick="switchTab('products-tab')" id="btn-products-tab" class="px-6 py-3.5 text-sm font-medium border-b-2 border-transparent text-slate-500 flex items-center space-x-2">
+      <i class="fa-solid fa-box-archive"></i> <span>Product_List 庫存與狀態矩陣</span>
     </button>
   </div>
 
-  <!-- 主內容包裝區 -->
   <main class="flex-grow p-4 sm:p-6 overflow-auto max-w-7xl w-full mx-auto">
     
-    <!-- 📄 頁籤一：預訂訂單管理 -->
     <section id="orders-tab" class="tab-content active space-y-4">
-      <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-2 bg-white p-4 rounded-lg shadow-sm">
-        <div class="relative flex-grow max-w-md">
+      <div class="bg-white p-4 rounded-lg shadow-sm flex flex-col sm:flex-row justify-between items-center gap-3">
+        <div class="relative flex-grow max-w-md w-full">
           <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-sm"></i>
-          <input type="text" id="order-search" oninput="filterOrders()" placeholder="搜尋訂單編號、明細商品、備註或付款方式..." class="w-full pl-9 pr-4 py-1.5 text-sm rounded border border-slate-200 bg-slate-50 focus:outline-none focus:border-amber-500">
+          <input type="text" id="order-search" oninput="filterOrders()" placeholder="過濾搜尋訂單編號、明細品項、付款方式..." class="w-full pl-9 pr-4 py-1.5 text-sm rounded border border-slate-200 bg-slate-50 focus:outline-none">
         </div>
-        <div class="flex items-center space-x-2 text-xs">
-          <span class="text-slate-500">快速狀態過濾：</span>
-          <select id="order-status-filter" onchange="filterOrders()" class="bg-white border border-slate-200 rounded px-2 py-1 focus:outline-none">
-            <option value="all">全部訂單 (未取消)</option>
-            <option value="新預訂">新預訂</option>
-            <option value="處理中">處理中</option>
-            <option value="已完成">已完成</option>
-            <option value="已取消">已取消</option>
-          </select>
-        </div>
+        <button onclick="toggleScannerModal()" class="bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold px-4 py-2 rounded flex items-center space-x-2">
+          <i class="fa-solid fa-camera"></i> <span>手機鏡頭掃碼核銷</span>
+        </button>
       </div>
 
-      <!-- 訂單卡片容器 -->
       <div id="orders-container" class="space-y-3">
-        <!-- JS 動態渲染 -->
-      </div>
+        </div>
     </section>
 
-    <!-- 📦 頁籤二：商品上架與庫存維護 -->
     <section id="products-tab" class="tab-content space-y-4">
-      <div class="bg-white p-4 rounded-lg shadow-sm flex justify-between items-center">
-        <h3 class="text-sm font-bold text-slate-700"><i class="fa-solid fa-cubes text-amber-500 mr-1"></i> 全品項庫存與狀態矩陣</h3>
-        <p class="text-[11px] text-slate-400">變更數值後請記得點擊該列的「儲存」按鈕</p>
-      </div>
-
-      <!-- 商品表格 -->
       <div class="bg-white rounded-lg shadow-sm overflow-hidden border border-slate-200">
         <div class="overflow-x-auto">
           <table class="w-full text-left border-collapse">
             <thead>
-              <tr class="bg-slate-50 text-slate-600 text-xs font-bold uppercase border-b border-slate-200">
-                <th class="p-4 w-20">商品圖片</th>
+              <tr class="bg-slate-50 text-slate-600 text-xs font-bold border-b border-slate-200">
+                <th class="p-4 w-20">縮圖</th>
                 <th class="p-4">商品名稱 / ID</th>
-                <th class="p-4 w-28">分類</th>
-                <th class="p-4 w-24">價格</th>
-                <th class="p-4 w-24">製程天數</th>
-                <th class="p-4 w-24">當前庫存</th>
-                <th class="p-4 w-28">前台狀態</th>
-                <th class="p-4 w-24 text-center">操作</th>
+                <th class="p-4">類別</th>
+                <th class="p-4">售價</th>
+                <th class="p-4">成本</th>
+                <th class="p-4 w-24">目前庫存</th>
+                <th class="p-4 w-32">前台Status</th>
+                <th class="p-4 w-24 text-center">指令</th>
               </tr>
             </thead>
             <tbody id="products-table-body" class="text-sm divide-y divide-slate-100">
-              <!-- JS 動態生成項目 -->
-            </tbody>
+              </tbody>
           </table>
         </div>
       </div>
     </section>
   </main>
 
-  <!-- 📷 相機掃描彈出燈箱 -->
   <div id="scanner-modal" class="fixed inset-0 z-50 bg-black/70 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-xl max-w-sm w-full overflow-hidden shadow-2xl">
       <div class="bg-slate-800 text-white px-4 py-3 flex justify-between items-center">
-        <span class="text-xs font-bold tracking-wider"><i class="fa-solid fa-qrcode text-amber-500 mr-1"></i> 請對準顧客的手機 QR Code</span>
-        <button onclick="toggleScannerModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+        <span class="text-xs font-bold"><i class="fa-solid fa-qrcode text-amber-500 mr-1"></i> 請對準訂單 QR 碼</span>
+        <button onclick="toggleScannerModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="p-4">
         <div id="qr-reader" class="w-full bg-black rounded-lg overflow-hidden"></div>
-        <p class="text-[11px] text-slate-500 mt-2 text-center">授權相機權限後，自動辨識訂單編號完成核銷對照。</p>
       </div>
     </div>
   </div>
 
-  <!-- 核心後台 JS 驅動邏輯 -->
   <script>
-    // 📌 請確認此處已替換為您的 Google Apps Script 網路應用程式部署網址
+    // 📌 替換為您的 GAS 網路應用程式 URL
     const API_URL = "https://script.google.com/macros/s/AKfycbyb1z9Z2U8BpxwU2n-jI39iJpU5WjL4rZ-lAclgHw-gZ2bJ9W9mI3wZgA3FpYw1Q-mP/exec";
 
     let adminData = { settings: {}, products: [], orders: [] };
     let html5QrcodeScanner = null;
 
-    window.addEventListener('DOMContentLoaded', fetchAdminData);
+    window.addEventListener('DOMContentLoaded', fetchAdminSnapshots);
 
-    // 🔄 異步拉取所有後台數據
-    async function fetchAdminData() {
+    async function fetchAdminSnapshots() {
       showLoader(true);
       try {
         const response = await fetch(API_URL);
         adminData = await response.json();
-        
-        // 渲染畫面
+        document.getElementById('brand-title').innerText = (adminData.settings.shopName || "浮光 Floating") + " | 核心營運後台";
         renderOrders();
         renderProductsTable();
-      } catch (error) {
-        alert("後台引擎資料同步失敗！請確認 GAS 試算表 ID 設定與部署權限是否開啟。");
-        console.error(error);
+      } catch (e) {
+        alert("同步試算表失敗，請核對 GAS 中 SPREADSHEET_ID 權限！");
       } finally {
         showLoader(false);
       }
@@ -155,191 +125,138 @@
 
     function showLoader(show) {
       const loader = document.getElementById('admin-loader');
-      if (loader) {
-        if (show) loader.classList.remove('opacity-0', 'pointer-events-none');
-        else loader.classList.add('opacity-0', 'pointer-events-none');
-      }
+      if (show) loader.classList.remove('opacity-0', 'pointer-events-none');
+      else loader.classList.add('opacity-0', 'pointer-events-none');
     }
 
-    // 📄 標籤頁切換
     function switchTab(tabId) {
       document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
       document.getElementById(tabId).classList.add('active');
-
       const btnOrders = document.getElementById('btn-orders-tab');
       const btnProducts = document.getElementById('btn-products-tab');
-
       if (tabId === 'orders-tab') {
-        btnOrders.className = "px-6 py-3.5 text-sm font-medium border-b-2 border-amber-600 text-amber-600 transition-all flex items-center space-x-2";
-        btnProducts.className = "px-6 py-3.5 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition-all flex items-center space-x-2";
+        btnOrders.className = "px-6 py-3.5 text-sm font-medium border-b-2 border-amber-600 text-amber-600 flex items-center space-x-2";
+        btnProducts.className = "px-6 py-3.5 text-sm font-medium border-b-2 border-transparent text-slate-500 flex items-center space-x-2";
       } else {
-        btnOrders.className = "px-6 py-3.5 text-sm font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition-all flex items-center space-x-2";
-        btnProducts.className = "px-6 py-3.5 text-sm font-medium border-b-2 border-amber-600 text-amber-600 transition-all flex items-center space-x-2";
+        btnOrders.className = "px-6 py-3.5 text-sm font-medium border-b-2 border-transparent text-slate-500 flex items-center space-x-2";
+        btnProducts.className = "px-6 py-3.5 text-sm font-medium border-b-2 border-amber-600 text-amber-600 flex items-center space-x-2";
       }
     }
 
-    /**
-     * 🛠️ 日期格式化小工具
-     * 將 ISO 格式字串 (2026-06-19T16:00:00.000Z) 清洗為乾淨的本地日期 (2026-06-19)
-     */
-    function formatPickupDate(dateStr) {
-      if (!dateStr) return "未填寫";
-      if (typeof dateStr === "string" && dateStr.includes("T")) {
-        return dateStr.split("T")[0]; 
-      }
-      return dateStr;
-    }
-
-    // 📑 訂單渲染引擎 (對接後端真實 Key: id, items, amount, payment, note, status, handler)
+    // 📑 渲染 Order_Log 訂單卡片
     function renderOrders() {
       const container = document.getElementById('orders-container');
       container.innerHTML = "";
-
+      
       if(!adminData.orders || adminData.orders.length === 0) {
-        container.innerHTML = `<div class="bg-white p-8 text-center text-xs text-slate-400 rounded-lg shadow-sm">目前試算表中暫無任何歷史預訂訂單。</div>`;
+        container.innerHTML = `<div class="bg-white p-8 text-center text-xs text-slate-400 rounded-lg">Order_Log 工作表中尚無任何歷史訂單資料。</div>`;
         return;
       }
 
-      // 注意：GAS 後端回傳的陣列已經由新到舊排序完成，不需重複 reverse 避免錯亂
-      const orderList = adminData.orders;
+      // 倒序排列，讓最新訂單呈現在最上方
+      const sorted = [...adminData.orders].reverse();
 
-      orderList.forEach(order => {
-        // 1. 安全映射與防呆防錯機制 (避免 undefined 出現)
-        const orderId = order.id || "未知單號";
-        const summaryText = order.items || "無品項明細資料";
-        const totalAmount = order.amount !== undefined ? order.amount : "0";
-        const paymentMethod = order.payment || "未載明付款方式";
-        const orderNote = order.note && String(order.note).trim() !== "" ? order.note : "無";
-        const currentStatus = order.status || "處理中";
-        const handlerName = order.handler && String(order.handler).trim() !== "" ? `經手人: ${order.handler}` : "尚未核銷完成";
-        const cleanDate = formatPickupDate(order.pickupDate);
-
-        // 2. 依訂單狀態動態美化 Badge 色彩
-        let statusBadgeColor = "bg-slate-100 text-slate-700 border border-slate-300";
-        if(currentStatus === "新預訂") statusBadgeColor = "bg-blue-50 text-blue-600 border border-blue-200 font-bold";
-        if(currentStatus === "處理中") statusBadgeColor = "bg-amber-50 text-amber-600 border border-amber-200 font-bold";
-        if(currentStatus === "已完成") statusBadgeColor = "bg-green-50 text-green-600 border border-green-200 font-bold";
-        if(currentStatus === "已取消") statusBadgeColor = "bg-rose-50 text-rose-500 border border-rose-200";
+      sorted.forEach(order => {
+        let badgeColor = "bg-amber-50 text-amber-600 border border-amber-200";
+        if(order.status === "已完成") badgeColor = "bg-green-50 text-green-600 border border-green-200";
+        if(order.status === "已取消") badgeColor = "bg-rose-50 text-rose-500 border border-rose-200";
 
         const card = document.createElement('div');
-        card.id = `order-card-${orderId}`;
-        card.className = "bg-white border border-slate-200 rounded-lg p-4 shadow-sm flex flex-col md:flex-row justify-between gap-4 transition-all duration-300 hover:border-slate-300";
-        
+        card.id = `order-card-${order.id}`;
+        card.className = "bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex flex-col md:flex-row justify-between gap-4";
         card.innerHTML = `
-          <!-- 左側區塊：基本資料與內文明細 -->
           <div class="space-y-2 flex-grow">
             <div class="flex flex-wrap items-center gap-2">
-              <span class="font-mono text-xs font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">${orderId}</span>
-              <span class="text-xs font-medium text-slate-600"><i class="fa-regular fa-calendar-check mr-1 text-slate-400"></i>取貨日：<strong class="text-slate-800">${cleanDate}</strong></span>
-              <span class="text-xs ${statusBadgeColor} px-2 py-0.5 rounded text-[11px]">${currentStatus}</span>
+              <span class="font-mono text-xs font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded border">${order.id}</span>
+              <span class="text-xs font-medium text-slate-500"><i class="fa-regular fa-calendar mr-1"></i>取貨日期：<strong class="text-slate-800">${order.pickupDate}</strong></span>
+              <span class="text-xs ${badgeColor} px-2 py-0.5 rounded text-[11px] font-bold">${order.status}</span>
             </div>
-            
-            <!-- 訂單內含購買明細商品 -->
-            <div class="bg-slate-50 p-2.5 rounded text-xs text-slate-700 font-mono space-y-1 border border-slate-100">
-              <i class="fa-solid fa-basket-shopping text-slate-400 mr-1"></i>${summaryText}
+            <div class="bg-slate-50 p-2.5 rounded text-xs font-mono border text-slate-700">
+              <i class="fa-solid fa-basket-shopping text-slate-400 mr-1"></i>${order.items}
             </div>
-
-            <!-- 客戶備註與支付詳情 -->
-            <div class="text-xs text-slate-500 flex flex-wrap gap-x-4 gap-y-1 pt-0.5">
-              <span><i class="fa-solid fa-wallet text-slate-400 mr-1"></i>付款管道：<strong class="text-slate-700">${paymentMethod}</strong></span>
-              <span><i class="fa-solid fa-comment-dots text-slate-400 mr-1"></i>客戶備註：<span class="text-slate-700 bg-amber-50/60 px-1 rounded">${orderNote}</span></span>
+            <div class="text-[11px] text-slate-500 flex flex-wrap gap-x-4">
+              <span>付款：<strong class="text-slate-700">${order.payment}</strong></span>
+              <span>備註：<span class="text-slate-600">${order.note || '無'}</span></span>
+              <span class="text-slate-400 italic">成立時間: ${order.createdAt}</span>
             </div>
           </div>
-
-          <!-- 右側區塊：核銷狀態動作控制面板 -->
-          <div class="flex flex-col sm:flex-row md:flex-col justify-end items-end gap-2 min-w-[210px] pt-3 md:pt-0 border-t md:border-t-0 border-slate-100">
+          <div class="flex flex-col justify-between items-end min-w-[200px] border-t md:border-t-0 pt-2 md:pt-0 border-slate-100">
             <div class="text-right w-full">
-              <p class="text-[10px] text-slate-400 uppercase tracking-wider">應收小計</p>
-              <p class="text-xl font-bold text-slate-800 font-mono">NT$ ${totalAmount}</p>
-              <p class="text-[10px] text-slate-400 italic font-mono mt-0.5">${handlerName}</p>
+              <span class="text-[10px] text-slate-400 block">總金額 / 純利潤</span>
+              <span class="text-md font-bold font-mono text-slate-800">NT$ ${order.amount}</span>
+              <span class="text-xs font-mono text-green-600 block">利潤: +${order.profit}</span>
+              <span class="text-[10px] text-slate-400 font-mono block">經手店員: ${order.handler || '👤 尚未核銷'}</span>
             </div>
-            
-            <div class="flex gap-1.5 w-full">
-              <!-- 現場一鍵點擊快速核銷按鈕 -->
-              <button onclick="executeQuickComplete('${orderId}')" ${currentStatus === '已完成' ? 'disabled' : ''} class="flex-grow text-[11px] font-bold py-1.5 px-3 rounded border text-center transition-all flex items-center justify-center space-x-1 ${currentStatus === '已完成' ? 'bg-slate-50 border-slate-200 text-slate-400 cursor-not-allowed' : 'bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-600 hover:text-white hover:border-amber-600 shadow-sm'}">
-                <i class="fa-solid fa-stamp"></i>
-                <span>${currentStatus === '已完成' ? '已核銷完成' : '現場快點核銷'}</span>
-              </button>
+            <div class="flex gap-1.5 w-full mt-2">
+              <select onchange="updateStatus('${order.id}', this.value)" class="text-xs bg-slate-800 text-white rounded p-1.5 w-full font-medium focus:outline-none cursor-pointer">
+                <option value="" disabled selected>更改訂單狀態...</option>
+                <option value="處理中">⏳ 標記為: 處理中</option>
+                <option value="已完成">✅ 現場核銷: 交易完成</option>
+                <option value="已取消">❌ 標記為: 取消/廢棄</option>
+              </select>
             </div>
-
-            <!-- 完整狀態調度選單 (對接後端後台變更) -->
-            <select onchange="updateOrderStatusSelect('${orderId}', this.value)" class="text-xs bg-slate-800 text-white rounded px-2 py-1.5 w-full font-medium focus:outline-none cursor-pointer">
-              <option value="" disabled selected>調整處理進度...</option>
-              <option value="新預訂">📌 標記為：新預訂</option>
-              <option value="處理中">⏳ 標記為：處理中</option>
-              <option value="已完成">✅ 標記為：交易完成 (已核銷)</option>
-              <option value="已取消">❌ 標記為：取消與廢棄</option>
-            </select>
           </div>
         `;
         container.appendChild(card);
       });
     }
 
-    // 🔍 搜尋過濾邏輯
-    function filterOrders() {
-      const query = document.getElementById('order-search').value.toLowerCase();
-      const statusFilter = document.getElementById('order-status-filter').value;
+    // ⚡ 執行 Order_Log 狀態變更 (內嵌員工工號檢驗)
+    async function updateStatus(orderId, nextStatus) {
+      const opId = document.getElementById('operator-id').value.trim();
+      if(!opId) { alert("【權限拒絕】請先在頂部輸入您的店員工號（如 SS123）再進行操作！"); fetchAdminSnapshots(); return; }
       
-      adminData.orders.forEach(order => {
-        const card = document.getElementById(`order-card-${order.id}`);
-        if(!card) return;
+      showLoader(true);
+      const payload = {
+        action: "updateOrderStatus",
+        orderId: orderId,
+        status: nextStatus,
+        operator: opId
+      };
 
-        const matchesSearch = (order.id || "").toLowerCase().includes(query) || 
-                              (order.items || "").toLowerCase().includes(query) || 
-                              (order.note || "").toLowerCase().includes(query) ||
-                              (order.payment || "").toLowerCase().includes(query);
-        
-        let matchesStatus = true;
-        if(statusFilter !== 'all') {
-          matchesStatus = (order.status === statusFilter);
+      try {
+        const response = await fetch(API_URL, { method: "POST", body: JSON.stringify(payload) });
+        const res = await response.json();
+        if(res.status === "success") {
+          await fetchAdminSnapshots();
         } else {
-          matchesStatus = (order.status !== '已取消'); // 預設排除已取消項目
+          alert(`操作失敗：${res.message}`);
+          showLoader(false);
         }
-
-        if(matchesSearch && matchesStatus) {
-          card.classList.remove('hidden');
-        } else {
-          card.classList.add('hidden');
-        }
-      });
+      } catch(e) {
+        alert("發送故障，請確認網路連線。");
+        showLoader(false);
+      }
     }
 
-    // 📦 商品表格資料渲染
+    // 📦 渲染 Product_List 商品矩陣
     function renderProductsTable() {
       const tbody = document.getElementById('products-table-body');
       tbody.innerHTML = "";
-
-      if(!adminData.products || adminData.products.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="8" class="p-8 text-center text-xs text-slate-400">尚無商品矩陣資料。</td></tr>`;
-        return;
-      }
 
       adminData.products.forEach(p => {
         const tr = document.createElement('tr');
         tr.className = "hover:bg-slate-50 transition-colors";
         tr.innerHTML = `
-          <td class="p-4">
-            <img src="${p.imageUrl}" alt="" class="w-10 h-10 object-cover rounded bg-slate-100 border border-slate-200">
-          </td>
+          <td class="p-4"><img src="${p.imageUrl || 'https://via.placeholder.com/150'}" class="w-10 h-10 object-cover rounded border"></td>
           <td class="p-4">
             <p class="font-bold text-slate-800">${p.name}</p>
             <p class="text-[10px] text-slate-400 font-mono">${p.id}</p>
           </td>
           <td class="p-4 text-slate-500">${p.category}</td>
           <td class="p-4 font-mono font-bold text-slate-700">NT$ ${p.price}</td>
-          <td class="p-4 text-slate-600 font-mono">${p.daysRequired} 天</td>
+          <td class="p-4 font-mono text-slate-400">NT$ ${p.cost}</td>
           <td class="p-4">
-            <input type="number" id="p-stock-${p.id}" value="${p.stock}" class="w-16 border border-slate-200 rounded px-1.5 py-0.5 font-mono text-center text-xs bg-slate-50 focus:bg-white focus:border-amber-500">
+            <input type="number" id="stock-${p.id}" value="${p.stock}" class="w-16 border rounded text-center text-xs p-1 font-mono bg-slate-50 focus:bg-white">
           </td>
           <td class="p-4">
-            <select id="p-status-${p.id}" class="text-xs bg-white border border-slate-200 rounded px-1.5 py-1 focus:outline-none cursor-pointer">
+            <select id="status-${p.id}" class="text-xs bg-white border rounded p-1 focus:outline-none cursor-pointer">
               <option value="M" ${p.status === 'M' ? 'selected' : ''}>上架中 (M)</option>
               <option value="下架" ${p.status === '下架' ? 'selected' : ''}>🚫 已下架</option>
             </select>
           </td>
           <td class="p-4 text-center">
-            <button onclick="saveProductRow('${p.id}')" class="bg-slate-700 hover:bg-slate-900 text-white text-[11px] font-bold px-2.5 py-1 rounded transition-colors shadow-sm">
+            <button onclick="saveProductRow('${p.id}')" class="bg-slate-700 hover:bg-slate-900 text-white text-[11px] font-bold px-3 py-1 rounded shadow-sm">
               儲存
             </button>
           </td>
@@ -348,170 +265,80 @@
       });
     }
 
-    // ⚡ 動作一：一鍵快速點擊核銷 (對接後端 action: completeOrder)
-    async function executeQuickComplete(orderId) {
-      if(!confirm(`確認核銷訂單 [ ${orderId} ] 嗎？狀態將變更為已完成。`)) return;
-      showLoader(true);
-
-      const payload = {
-        action: "completeOrder",
-        orderId: orderId,
-        username: "後台管理員"
-      };
-
-      try {
-        const response = await fetch(API_URL, {
-          method: "POST",
-          body: JSON.stringify(payload)
-        });
-        const result = await response.json();
-        if(result.status === "success") {
-          alert("核銷成功！試算表狀態已同步。");
-          await fetchAdminData();
-        } else {
-          alert(`核銷失敗：${result.message}`);
-          showLoader(false);
-        }
-      } catch (error) {
-        alert("核銷通訊異常，請檢查網路連線。");
-        showLoader(false);
-      }
-    }
-
-    // ⚡ 動作二：下拉選單變更狀態 (對接後端 action: editProduct 或對應修改欄位)
-    // 因原後端保留 completeOrder 來處理核銷完成，若要變更為其他進度狀態，可彈性包裝送出
-    async function updateOrderStatusSelect(orderId, newStatus) {
-      if (newStatus === "已完成") {
-        await executeQuickComplete(orderId);
-        return;
-      }
-
-      showLoader(true);
-      // 利用後端提供之修改通用邏輯，直接傳送給變更欄位
-      const payload = {
-        action: "editProduct", // 此處若後端無實作通用訂單非完成狀態修改，改呼叫 completeOrder，我們統一對應後端
-        id: orderId,
-        status: newStatus
-      };
-
-      // 註：若後端現行僅處理 action === "completeOrder" 的狀態變更，可改用以下結構：
-      const fallbackPayload = {
-        action: "completeOrder",
-        orderId: orderId,
-        username: `系統調度 (${newStatus})`
-      };
-
-      try {
-        // 因後端只接受 completeOrder 且直接寫入"已完成"，若選取取消或新預訂，此處先提示店員：
-        if(newStatus !== "已完成") {
-          alert(`目前後端專注支援一鍵核銷變更為「已完成」。您選擇的「${newStatus}」已記錄，如需任意狀態修改亦可直接於試算表操作。`);
-        }
-        
-        const response = await fetch(API_URL, {
-          method: "POST",
-          body: JSON.stringify(fallbackPayload)
-        });
-        await fetchAdminData();
-      } catch (error) {
-        showLoader(false);
-      }
-    }
-
-    // 🔄 動作三：保存商品單列的修改（對接後端 action: editProduct）
+    // ⚡ 執行 Product_List 單列庫存/狀態修改 (內嵌員工工號檢驗)
     async function saveProductRow(id) {
-      const stockVal = parseInt(document.getElementById(`p-stock-${id}`).value);
-      const statusVal = document.getElementById(`p-status-${id}`).value;
-      const originalProd = adminData.products.find(p => p.id === id);
+      const opId = document.getElementById('operator-id').value.trim();
+      if(!opId) { alert("【權限拒絕】請先在頂部輸入您的店員工號（如 SS123）再進行操作！"); return; }
 
-      if(isNaN(stockVal)) {
-        alert("庫存必須填寫有效的整數數字！(-1 代表無限庫存)");
-        return;
-      }
+      const targetStock = parseInt(document.getElementById(`stock-${id}`).value);
+      const targetStatus = document.getElementById(`status-${id}`).value;
+
+      if(isNaN(targetStock)) { alert("庫存必須填寫有效整數！"); return; }
 
       showLoader(true);
       const payload = {
-        action: "editProduct",
+        action: "updateProductRow",
         id: id,
-        name: originalProd ? originalProd.name : "",
-        category: originalProd ? originalProd.category : "",
-        price: originalProd ? originalProd.price : 0,
-        cost: originalProd ? originalProd.cost : 0,
-        daysRequired: originalProd ? originalProd.daysRequired : 0,
-        stock: stockVal,
-        status: statusVal
+        stock: targetStock,
+        status: targetStatus,
+        operator: opId
       };
 
       try {
-        const response = await fetch(API_URL, {
-          method: "POST",
-          body: JSON.stringify(payload)
-        });
-        const result = await response.json();
-        if(result.status === "success") {
-          alert("商品主檔變更成功，前台已即時連動！");
-          await fetchAdminData();
+        const response = await fetch(API_URL, { method: "POST", body: JSON.stringify(payload) });
+        const res = await response.json();
+        if(res.status === "success") {
+          alert("商品主檔變更成功，Log 已審計，前台已即時連動！");
+          await fetchAdminSnapshots();
         } else {
-          alert(`更新失敗：${result.message}`);
+          alert(`修改失敗：${res.message}`);
           showLoader(false);
         }
-      } catch (error) {
-        alert("網路異常，商品設定更新未成功！");
+      } catch(e) {
+        alert("通訊失敗。");
         showLoader(false);
       }
     }
 
-    // 📸 手機相機核銷燈箱控制
-    function toggleScannerModal() {
-      const modal = document.getElementById('scanner-modal');
-      if(modal.classList.contains('hidden')) {
-        modal.classList.remove('hidden');
-        startQrScanner();
-      } else {
-        modal.classList.add('hidden');
-        stopQrScanner();
-      }
-    }
-
-    function startQrScanner() {
-      html5QrcodeScanner = new Html5Qrcode("qr-reader");
-      const config = { fps: 10, qrbox: { width: 220, height: 220 } };
-      
-      html5QrcodeScanner.start(
-        { facingMode: "environment" },
-        config,
-        (decodedText) => {
-          stopQrScanner();
-          document.getElementById('scanner-modal').classList.add('hidden');
-          
-          const searchInput = document.getElementById('order-search');
-          searchInput.value = decodedText;
-          filterOrders();
-          
-          setTimeout(() => {
-            const targetCard = document.getElementById(`order-card-${decodedText}`);
-            if(targetCard) {
-              targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-              targetCard.classList.add('bg-amber-100', 'border-amber-500', 'scale-[1.02]');
-              setTimeout(() => {
-                targetCard.classList.remove('bg-amber-100', 'border-amber-500', 'scale-[1.02]');
-              }, 3000);
-            } else {
-              alert(`已掃描成功：${decodedText}，但列表中找不到對應訂單！`);
-            }
-          }, 400);
-        },
-        (errorMessage) => {}
-      ).catch(err => {
-        console.error("相機啟動異常：", err);
+    function filterOrders() {
+      const q = document.getElementById('order-search').value.toLowerCase();
+      adminData.orders.forEach(o => {
+        const card = document.getElementById(`order-card-${o.id}`);
+        if(!card) return;
+        const match = o.id.toLowerCase().includes(q) || o.items.toLowerCase().includes(q) || o.payment.toLowerCase().includes(q);
+        if(match) card.classList.remove('hidden');
+        else card.classList.add('hidden');
       });
     }
 
-    function stopQrScanner() {
-      if(html5QrcodeScanner) {
-        html5QrcodeScanner.stop().then(() => {
-          html5QrcodeScanner = null;
-        }).catch(err => console.error(err));
-      }
+    function toggleScannerModal() {
+      const m = document.getElementById('scanner-modal');
+      if(m.classList.contains('hidden')) { m.classList.remove('hidden'); startScanner(); }
+      else { m.classList.add('hidden'); stopScanner(); }
+    }
+
+    function startScanner() {
+      html5QrcodeScanner = new Html5Qrcode("qr-reader");
+      html5QrcodeScanner.start(
+        { facingMode: "environment" }, { fps: 10, qrbox: 230 },
+        (txt) => {
+          stopScanner();
+          document.getElementById('scanner-modal').classList.add('hidden');
+          document.getElementById('order-search').value = txt;
+          filterOrders();
+          setTimeout(() => {
+            const card = document.getElementById(`order-card-${txt}`);
+            if(card) {
+              card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              card.classList.add('bg-amber-50', 'border-amber-500');
+            }
+          }, 300);
+        }, (err) => {}
+      ).catch(e => console.error(e));
+    }
+
+    function stopScanner() {
+      if(html5QrcodeScanner) { html5QrcodeScanner.stop().then(() => { html5QrcodeScanner = null; }); }
     }
   </script>
 </body>
