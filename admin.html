@@ -8,6 +8,8 @@
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
         .nav-active { background-color: #374151; border-left-width: 4px; border-color: #FBBF24; color: #FBBF24; font-weight: bold; }
+        /* 側邊欄平滑滑動動畫 */
+        .sidebar-transition { transition: transform 0.3s ease-in-out; }
     </style>
 </head>
 <body class="bg-gray-900 text-gray-100 min-h-screen font-sans flex flex-col">
@@ -23,12 +25,28 @@
         <button onclick="login()" class="w-full bg-yellow-500 text-gray-900 py-3 rounded-xl font-bold tracking-widest hover:bg-yellow-400 transition">進入工作台</button>
     </div>
 
-    <div id="main-admin" class="hidden flex flex-1 min-h-screen">
-        <div class="w-64 bg-gray-900 border-r border-gray-800 p-4 flex flex-col justify-between">
+    <div id="main-admin" class="hidden flex flex-col md:flex-row flex-1 min-h-screen relative overflow-hidden">
+        
+        <div class="md:hidden bg-gray-900 border-b border-gray-800 p-4 flex justify-between items-center z-30">
+            <div>
+                <h2 class="text-base font-bold tracking-widest text-yellow-400">浮光 FLOATING</h2>
+                <p class="text-[9px] text-gray-400">登入：<span id="current-user-tag-mobile" class="text-white"></span></p>
+            </div>
+            <button onclick="toggleSidebar(true)" class="bg-gray-800 border border-gray-700 px-3 py-1.5 rounded-xl text-xs font-bold text-yellow-400 hover:bg-gray-700 transition">
+                ☰ 功能選單
+            </button>
+        </div>
+
+        <div id="sidebar-overlay" onclick="toggleSidebar(false)" class="hidden fixed inset-0 bg-black bg-opacity-60 z-40 md:hidden"></div>
+
+        <div id="admin-sidebar" class="sidebar-transition fixed inset-y-0 left-0 w-64 bg-gray-900 border-r border-gray-800 p-4 flex flex-col justify-between z-50 transform -translate-x-full md:translate-x-0 md:static md:h-auto">
             <div class="space-y-6">
-                <div class="px-2">
-                    <h2 class="text-base font-bold tracking-widest text-yellow-400">浮光 FLOATING</h2>
-                    <p class="text-[10px] text-gray-400 mt-1">目前登入：<span id="current-user-tag" class="text-white"></span></p>
+                <div class="px-2 flex justify-between items-center">
+                    <div>
+                        <h2 class="text-base font-bold tracking-widest text-yellow-400">浮光 FLOATING</h2>
+                        <p class="text-[10px] text-gray-400 mt-1">目前登入：<span id="current-user-tag" class="text-white"></span></p>
+                    </div>
+                    <button onclick="toggleSidebar(false)" class="md:hidden text-gray-400 text-lg hover:text-white px-2">✕</button>
                 </div>
                 <nav class="space-y-1 text-sm">
                     <button onclick="switchTab('cashier')" id="tab-cashier" class="nav-active flex items-center space-x-3 w-full p-3 rounded-xl text-left">
@@ -48,12 +66,12 @@
                     </button>
                 </nav>
             </div>
-            <button onclick="location.reload()" class="w-full border border-gray-700 p-2.5 text-xs text-gray-400 rounded-xl hover:bg-gray-800">安全登出</button>
+            <button onclick="location.reload()" class="w-full border border-gray-700 p-2.5 text-xs text-gray-400 rounded-xl hover:bg-gray-800 mt-4">安全登出</button>
         </div>
 
-        <div class="flex-1 p-8 bg-gray-950 overflow-y-auto space-y-6">
+        <div class="flex-1 p-4 md:p-8 bg-gray-950 overflow-y-auto space-y-6 w-full">
             
-            <div class="grid grid-cols-3 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div class="bg-gray-900 border border-gray-800 p-4 rounded-xl shadow">
                     <p class="text-xs text-gray-400">今日完成訂單額</p>
                     <p class="text-xl font-bold font-mono text-green-400 mt-1">$<span id="dash-revenue">0</span></p>
@@ -70,7 +88,7 @@
 
             <hr class="border-gray-800">
 
-            <div id="panel-cashier" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div id="panel-cashier" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div class="space-y-4">
                     <h3 class="text-sm font-bold text-gray-300">核銷線上預訂訂單</h3>
                     <div class="bg-gray-800 p-4 rounded-xl border border-gray-700">
@@ -119,16 +137,16 @@
             </div>
 
             <div id="panel-orders" class="hidden space-y-4">
-                <div class="flex justify-between items-center">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                     <h3 class="text-base font-bold tracking-wide">訂單流水帳記錄</h3>
-                    <div class="flex space-x-2 text-xs">
-                        <button id="btn-filter-all" onclick="filterOrders('全部')" class="px-4 py-2 rounded font-bold bg-gray-200 text-gray-900 shadow-md">全部</button>
-                        <button id="btn-filter-pending" onclick="filterOrders('處理中')" class="px-4 py-2 rounded bg-gray-800 text-gray-300 hover:bg-gray-700">處理中</button>
-                        <button id="btn-filter-done" onclick="filterOrders('已完成')" class="px-4 py-2 rounded bg-gray-800 text-gray-300 hover:bg-gray-700">已完成</button>
+                    <div class="flex space-x-2 text-xs w-full sm:w-auto overflow-x-auto pb-1">
+                        <button id="btn-filter-all" onclick="filterOrders('全部')" class="px-3 py-2 rounded font-bold bg-gray-200 text-gray-900 shadow-md whitespace-nowrap">全部</button>
+                        <button id="btn-filter-pending" onclick="filterOrders('處理中')" class="px-3 py-2 rounded bg-gray-800 text-gray-300 hover:bg-gray-700 whitespace-nowrap">處理中</button>
+                        <button id="btn-filter-done" onclick="filterOrders('已完成')" class="px-3 py-2 rounded bg-gray-800 text-gray-300 hover:bg-gray-700 whitespace-nowrap">已完成</button>
                     </div>
                 </div>
                 <div class="bg-gray-900 border border-gray-800 rounded-2xl p-4 overflow-x-auto">
-                    <table class="w-full text-left text-xs">
+                    <table class="w-full text-left text-xs min-w-[600px]">
                         <thead>
                             <tr class="border-b border-gray-800 text-gray-400">
                                 <th class="pb-2">單號/時間</th>
@@ -196,7 +214,7 @@
                 <h3 class="text-base font-bold tracking-wide">門市商品主檔與狀態維護</h3>
                 <div class="bg-gray-800 p-4 rounded-2xl border border-gray-700">
                     <div class="overflow-x-auto">
-                        <table class="w-full text-left text-xs">
+                        <table class="w-full text-left text-xs min-w-[650px]">
                             <thead>
                                 <tr class="border-b border-gray-700 text-gray-400">
                                     <th class="pb-2">照片</th>
@@ -245,7 +263,7 @@
     </div>
 
     <div id="edit-modal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50">
-        <div class="bg-gray-800 border border-gray-700 rounded-2xl p-5 max-w-md w-full space-y-3 shadow-2xl">
+        <div class="bg-gray-800 border border-gray-700 rounded-2xl p-5 max-w-md w-full space-y-3 shadow-2xl overflow-y-auto max-h-[90vh]">
             <div class="flex justify-between items-center border-b border-gray-700 pb-2">
                 <h3 class="text-sm font-bold text-yellow-400">✏️ 編輯修改商品資訊</h3>
                 <button onclick="closeEditModal()" class="text-gray-400 hover:text-white">✕</button>
@@ -310,6 +328,19 @@
         // ✨ 全局篩選鎖：預設看全部
         let currentFilterStatus = "全部"; 
 
+        // 📱 控制手機版選單滑動彈出
+        function toggleSidebar(open) {
+            const sidebar = document.getElementById('admin-sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            if (open) {
+                sidebar.classList.remove('-translate-x-full');
+                overlay.classList.remove('hidden');
+            } else {
+                sidebar.classList.add('-translate-x-full');
+                overlay.classList.add('hidden');
+            }
+        }
+
         // 監聽圖片選擇轉換 Base64
         document.getElementById('new-image-file').addEventListener('change', function(e) {
             const file = e.target.files[0]; if (!file) return;
@@ -329,8 +360,11 @@
             fetch(GAS_API, { method: "POST", body: JSON.stringify({ action: "login", username: user }) })
             .then(res => res.json()).then(res => {
                 if(res.status === "success") {
-                    currentStaff = user; document.getElementById("current-user-tag").innerText = res.name;
-                    document.getElementById("login-box").classList.add("hidden"); document.getElementById("main-admin").classList.remove("hidden");
+                    currentStaff = user; 
+                    document.getElementById("current-user-tag").innerText = res.name;
+                    document.getElementById("current-user-tag-mobile").innerText = res.name; // 手機版同步寫入
+                    document.getElementById("login-box").classList.add("hidden"); 
+                    document.getElementById("main-admin").classList.remove("hidden");
                     refreshData();
                 } else { alert(res.message); }
             });
@@ -344,6 +378,9 @@
             });
             document.getElementById(`panel-${tabId}`).classList.remove("hidden");
             document.getElementById(`tab-${tabId}`).className = "nav-active flex items-center space-x-3 w-full p-3 rounded-xl text-left";
+            
+            // 📱 切換頁籤後，手機版選單要自動縮回去
+            toggleSidebar(false);
             refreshData();
         }
 
@@ -376,7 +413,7 @@
                 renderCashierSelect();
                 renderInventoryTable();
                 
-                // ✨ 修正點：刷新後，根據全域鎖決定渲染畫面，不洗回全部
+                // 刷新後，根據全域鎖決定渲染畫面，不洗回全部
                 applyCurrentFilter();
             });
         }
@@ -456,13 +493,13 @@
             });
         }
 
-        // ✨ 觸發分類按鈕
+        // 觸發分類按鈕
         function filterOrders(status) {
             currentFilterStatus = status; 
             applyCurrentFilter();
         }
 
-        // ✨ 依照狀態渲染，並加上按鈕高亮
+        // 依照狀態渲染，並加上按鈕高亮
         function applyCurrentFilter() {
             updateFilterButtonStyles(currentFilterStatus);
             if (currentFilterStatus === "全部") {
@@ -472,7 +509,7 @@
             }
         }
 
-        // ✨ 控制篩選按鈕高亮 Tailwind
+        // 控制篩選按鈕高亮 Tailwind
         function updateFilterButtonStyles(activeStatus) {
             const btnAll = document.getElementById("btn-filter-all");
             const btnPending = document.getElementById("btn-filter-pending");
@@ -480,12 +517,12 @@
 
             if (!btnAll || !btnPending || !btnDone) return;
 
-            const reset = (btn) => { btn.className = "px-4 py-2 rounded bg-gray-800 text-gray-300 hover:bg-gray-700 transition"; };
+            const reset = (btn) => { btn.className = "px-3 py-2 rounded bg-gray-800 text-gray-300 hover:bg-gray-700 transition whitespace-nowrap"; };
             reset(btnAll); reset(btnPending); reset(btnDone);
 
-            if (activeStatus === "全部") btnAll.className = "px-4 py-2 rounded font-bold bg-gray-200 text-gray-900 shadow-md";
-            if (activeStatus === "處理中") btnPending.className = "px-4 py-2 rounded font-bold bg-yellow-500 text-gray-900 shadow-md";
-            if (activeStatus === "已完成") btnDone.className = "px-4 py-2 rounded font-bold bg-green-500 text-gray-900 shadow-md";
+            if (activeStatus === "全部") btnAll.className = "px-3 py-2 rounded font-bold bg-gray-200 text-gray-900 shadow-md whitespace-nowrap";
+            if (activeStatus === "處理中") btnPending.className = "px-3 py-2 rounded font-bold bg-yellow-500 text-gray-900 shadow-md whitespace-nowrap";
+            if (activeStatus === "已完成") btnDone.className = "px-3 py-2 rounded font-bold bg-green-500 text-gray-900 shadow-md whitespace-nowrap";
         }
 
         // 渲染流水帳表格
@@ -496,7 +533,7 @@
                     `<span class="bg-green-950 text-green-400 px-2 py-0.5 rounded text-[10px]">已完成</span>` :
                     `<span class="bg-yellow-950 text-yellow-400 px-2 py-0.5 rounded text-[10px]">處理中</span>`;
                 tbody.innerHTML += `
-                    <tr class="hover:bg-gray-800">
+                    <tr class="hover:bg-gray-800 border-b border-gray-800">
                         <td class="py-2.5 font-mono"><strong>${o.id}</strong><br><span class="text-gray-500 text-[10px]">${o.timestamp}</span></td>
                         <td class="py-2.5 text-white">${o.items}<br><span class="text-[10px] text-gray-500">${o.note}</span></td>
                         <td class="py-2.5 font-mono text-green-400">$${o.amount}<br><span class="text-gray-500 text-[10px]">利:$${o.profit}</span></td>
@@ -508,164 +545,185 @@
             });
         }
 
-        // 渲染商品管理清單
+        // 渲染商品管理清單 (防止圖片破圖優化版)
         function renderInventoryTable() {
             const tbody = document.getElementById("admin-table-body"); tbody.innerHTML = "";
             allProducts.forEach(p => {
                 let statusStr = p.stock === -1 ? 
-                    `<span class="text-indigo-400 bg-indigo-950 px-2 py-0.5 rounded text-[10px]">預訂 (製程:${p.daysRequired}天)</span>` : 
-                    `<span class="text-green-400 bg-green-950 px-2 py-0.5 rounded text-[10px]">現貨: ${p.stock} 件</span>`;
+                    `<span class="text-indigo-400 bg-indigo-950 px-2 py-0.5 rounded text-[10px] whitespace-nowrap">預訂 (製程:${p.daysRequired}天)</span>` : 
+                    `<span class="text-green-400 bg-green-950 px-2 py-0.5 rounded text-[10px] whitespace-nowrap">現貨: ${p.stock} 件</span>`;
                 
                 let toggleBtn = p.status === "M" ?
-                    `<button onclick="toggleProductVisibility('${p.id}', 'H')" class="bg-gray-700 text-gray-300 px-2 py-1 rounded text-[11px]">顯示中</button>` :
-                    `<button onclick="toggleProductVisibility('${p.id}', 'M')" class="bg-red-950 text-red-400 border border-red-800 px-2 py-1 rounded text-[11px]">已隱藏</button>`;
+                    `<button onclick="toggleProductVisibility('${p.id}', 'H')" class="bg-gray-700 text-gray-300 px-2 py-1 rounded text-[11px] whitespace-nowrap">顯示中</button>` :
+                    `<button onclick="toggleProductVisibility('${p.id}', 'M')" class="bg-red-950 text-red-400 border border-red-800 px-2 py-1 rounded text-[11px] whitespace-nowrap">已隱藏</button>`;
 
                 tbody.innerHTML += `
                     <tr class="border-b border-gray-800 hover:bg-gray-800 transition text-gray-300">
-                        <td class="py-2.5"><img src="${p.imageUrl}" class="w-8 h-8 object-cover rounded shadow"></td>
+                        <td class="py-2.5"><img src="${p.imageUrl}" class="w-8 h-8 object-cover rounded shadow min-w-[32px]"></td>
                         <td class="py-2.5 text-white font-medium text-xs">${p.name}</td>
-                        <td class="py-2.5"><span class="bg-gray-700 px-2 py-0.5 rounded text-[11px]">${p.category}</span></td>
-                        <td class="py-2.5 font-mono">$${p.price}/<span class="text-gray-500">$${p.cost}</span></td>
+                        <td class="py-2.5"><span class="bg-gray-700 px-2 py-0.5 rounded text-[10px] whitespace-nowrap">${p.category}</span></td>
+                        <td class="py-2.5 font-mono text-xs text-yellow-400">$${p.price}<br><span class="text-gray-500 text-[10px]">本:$${p.cost}</span></td>
                         <td class="py-2.5">${statusStr}</td>
                         <td class="py-2.5">${toggleBtn}</td>
-                        <td class="py-2.5 text-right space-x-1">
-                            <button onclick="openEditModal('${p.id}')" class="bg-yellow-500 text-gray-900 px-2.5 py-1 rounded text-[11px] font-bold">編輯</button>
-                            <button onclick="deleteProduct('${p.id}')" class="text-red-400 px-2 py-1 text-[11px]">刪除</button>
+                        <td class="py-2.5 text-right whitespace-nowrap">
+                            <button onclick="openEditModal('${p.id}')" class="bg-yellow-500 text-gray-900 px-2.5 py-1 rounded-md text-[11px] font-bold hover:bg-yellow-400">編輯</button>
                         </td>
                     </tr>
                 `;
             });
         }
 
+        // 切換商品前台可見度 (顯示/隱藏)
         function toggleProductVisibility(id, newStatus) {
-            const p = allProducts.find(prod => prod.id === id); if(!p) return;
-            fetch(GAS_API, { method: "POST", body: JSON.stringify({
-                action: "editProduct", id: id, name: p.name, category: p.category, price: p.price, cost: p.cost,
-                daysRequired: p.daysRequired, stock: p.stock, note: p.note, status: newStatus
-            }) }).then(res => res.json()).then(res => { refreshData(); });
+            const payload = { action: "toggleProduct", id: id, status: newStatus };
+            fetch(GAS_API, { method: "POST", body: JSON.stringify(payload) }).then(res => res.json()).then(res => {
+                refreshData();
+            });
         }
 
-        // 開啟編輯彈窗
+        // 開啟編輯視窗並填入舊資料
         function openEditModal(id) {
-            const p = allProducts.find(prod => prod.id === id); if(!p) return;
+            const p = allProducts.find(item => item.id === id); if(!p) return;
             document.getElementById("edit-prod-id").value = p.id;
+            document.getElementById("edit-prod-status").value = p.status;
             document.getElementById("edit-name").value = p.name;
             document.getElementById("edit-category").value = p.category;
             document.getElementById("edit-price").value = p.price;
             document.getElementById("edit-cost").value = p.cost;
-            document.getElementById("edit-days").value = p.daysRequired;
-            document.getElementById("edit-stock").value = p.stock === -1 ? 0 : p.stock;
-            document.getElementById("edit-note").value = p.note;
-            document.getElementById("edit-prod-status").value = p.status;
+            document.getElementById("edit-note").value = p.note || "";
             document.getElementById("edit-img-preview").src = p.imageUrl;
             
-            let mode = p.stock === -1 ? "-1" : "0";
-            document.getElementById("edit-stock-mode").value = mode;
-            toggleStockInput(mode, 'edit-stock-box', 'edit-days-box');
-            
-            editBase64Image = ""; editImageName = ""; document.getElementById("edit-image-file").value = "";
+            editBase64Image = ""; editImageName = "";
+            document.getElementById("edit-image-file").value = "";
+
+            if (p.stock === -1) {
+                document.getElementById("edit-stock-mode").value = "-1";
+                document.getElementById("edit-days").value = p.daysRequired;
+                document.getElementById("edit-stock").value = "10";
+                toggleStockInput("-1", "edit-stock-box", "edit-days-box");
+            } else {
+                document.getElementById("edit-stock-mode").value = "0";
+                document.getElementById("edit-stock").value = p.stock;
+                document.getElementById("edit-days").value = "3";
+                toggleStockInput("0", "edit-stock-box", "edit-days-box");
+            }
             document.getElementById("edit-modal").classList.remove("hidden");
         }
 
         function closeEditModal() { document.getElementById("edit-modal").classList.add("hidden"); }
 
+        // 送出修改商品資訊
         function submitEditProduct() {
-            const id = document.getElementById("edit-prod-id").value;
-            const name = document.getElementById("edit-name").value.trim();
-            const cat = document.getElementById("edit-category").value;
-            const price = document.getElementById("edit-price").value;
-            const cost = document.getElementById("edit-cost").value;
-            const mode = document.getElementById("edit-stock-mode").value;
-            const status = document.getElementById("edit-prod-status").value;
-            const stock = mode === "-1" ? -1 : Number(document.getElementById("edit-stock").value);
-            const days = mode === "-1" ? Number(document.getElementById("edit-days").value) : 0;
-            const note = document.getElementById("edit-note").value.trim();
-
-            if(!name || !price || !cost) return alert("資訊不完整");
+            const btn = document.getElementById("btn-save-edit"); btn.disabled = true; btn.innerText = "正在儲存變更...";
+            
             const payload = {
-                action: "editProduct", id: id, name: name, category: cat, price: Number(price), cost: Number(cost),
-                daysRequired: days, stock: stock, note: note, status: status, imageBlob: editBase64Image, imageName: editImageName
+                action: "editProduct",
+                id: document.getElementById("edit-prod-id").value,
+                name: document.getElementById("edit-name").value.trim(),
+                category: document.getElementById("edit-category").value,
+                price: Number(document.getElementById("edit-price").value),
+                cost: Number(document.getElementById("edit-cost").value),
+                stockMode: document.getElementById("edit-stock-mode").value,
+                daysRequired: Number(document.getElementById("edit-days").value),
+                stock: Number(document.getElementById("edit-stock").value),
+                note: document.getElementById("edit-note").value.trim(),
+                status: document.getElementById("edit-prod-status").value,
+                imageData: editBase64Image,
+                imageName: editImageName
             };
+
             fetch(GAS_API, { method: "POST", body: JSON.stringify(payload) }).then(res => res.json()).then(res => {
-                closeEditModal(); refreshData();
+                alert(res.message); closeEditModal(); btn.disabled = false; btn.innerText = "儲存修改"; refreshData();
             });
         }
 
-        // 新增上架商品項目
+        // 上架全新商品
         function uploadAndAddProduct() {
             const name = document.getElementById("new-name").value.trim();
             const cat = document.getElementById("new-category").value;
-            const price = document.getElementById("new-price").value;
-            const cost = document.getElementById("new-cost").value;
+            const price = Number(document.getElementById("new-price").value);
+            const cost = Number(document.getElementById("new-cost").value);
             const mode = document.getElementById("stock-mode").value;
-            const stock = mode === "-1" ? -1 : Number(document.getElementById("new-stock").value);
-            const days = mode === "-1" ? Number(document.getElementById("new-days").value) : 0;
+            const days = Number(document.getElementById("new-days").value);
+            const stock = Number(document.getElementById("new-stock").value);
             const note = document.getElementById("new-note").value.trim();
 
-            if(!name || !price || !cost) return alert("欄位不能為空");
-            document.getElementById("btn-add-prod").disabled = true;
+            if(!name || !price) { alert("品名與售價為必填欄位！"); return; }
+            if(!base64Image) { alert("請務必選擇一張產品照片檔案！"); return; }
+
+            const btn = document.getElementById("btn-add-prod"); btn.disabled = true; btn.innerText = "正在上傳產品圖與建立資料...";
 
             const payload = {
-                action: "addProduct", name: name, category: cat, price: Number(price), cost: Number(cost),
-                daysRequired: days, stock: stock, note: note, imageBlob: base64Image, imageName: imageName
+                action: "addProduct", name: name, category: cat, price: price, cost: cost,
+                stockMode: mode, daysRequired: days, stock: stock, note: note,
+                imageData: base64Image, imageName: imageName
             };
+
             fetch(GAS_API, { method: "POST", body: JSON.stringify(payload) }).then(res => res.json()).then(res => {
-                alert(res.message); document.getElementById("btn-add-prod").disabled = false; switchTab('inventory');
+                alert(res.message); btn.disabled = false; btn.innerText = "確認上架";
+                document.getElementById("new-name").value = "";
+                document.getElementById("new-price").value = "";
+                document.getElementById("new-cost").value = "";
+                document.getElementById("new-note").value = "";
+                document.getElementById("new-image-file").value = "";
+                base64Image = ""; imageName = "";
+                refreshData();
             });
         }
 
-        function deleteProduct(id) {
-            if(!confirm("確定永久刪除？")) return;
-            fetch(GAS_API, { method: "POST", body: JSON.stringify({ action: "deleteProduct", id: id }) })
-            .then(res => res.json()).then(res => { refreshData(); });
-        }
-
-        // 透過單號撈取要核銷的訂單詳情
-        let activeScanOrderId = "";
-        function fetchOrderDetails(orderId) {
-            if(!orderId) return;
-            fetch(GAS_API, { method: "POST", body: JSON.stringify({ action: "scanOrder", orderId: orderId }) })
-            .then(res => res.json()).then(res => {
-                if(res.status === "success") {
-                    activeScanOrderId = res.order.orderId;
-                    document.getElementById("det-id").innerText = res.order.orderId;
-                    document.getElementById("det-items").innerText = res.order.items;
-                    document.getElementById("det-amount").innerText = res.order.amount;
-                    document.getElementById("det-date").innerText = res.order.pickupDate;
-                    document.getElementById("det-payment").innerText = res.order.paymentMethod;
-                    document.getElementById("det-note").innerText = res.order.note || "無";
-                    
-                    const statusBox = document.getElementById("det-status");
-                    statusBox.innerText = res.order.status;
-                    if(res.order.status === "已完成") {
-                        statusBox.className = "px-2 py-0.5 rounded text-[10px] bg-green-950 text-green-200";
-                        document.getElementById("btn-complete-order").classList.add("hidden");
-                    } else {
-                        statusBox.className = "px-2 py-0.5 rounded text-[10px] bg-yellow-950 text-yellow-200";
-                        document.getElementById("btn-complete-order").classList.remove("hidden");
-                    }
-                    document.getElementById("order-detail-box").classList.remove("hidden");
-                } else { alert(res.message); }
-            });
-        }
-
-        // 執行核銷為已完成
-        function completeOrder() {
-            if(!activeScanOrderId) return;
-            fetch(GAS_API, { method: "POST", body: JSON.stringify({ action: "completeOrder", orderId: activeScanOrderId, username: currentStaff }) })
-            .then(res => res.json()).then(res => { 
-                if(res.status === "success") { 
-                    alert(res.message); 
-                    fetchOrderDetails(activeScanOrderId); 
-                    refreshData(); 
-                } 
-            });
-        }
-
-        // 相機條碼掃描
+        // 條碼掃描核心
+        let html5QrcodeScanner = null;
         function startScan() {
-            const html5QrcodeScanner = new Html5Qrcode("reader");
-            html5QrcodeScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, (txt) => { html5QrcodeScanner.stop(); document.getElementById("manual-order-id").value = txt; fetchOrderDetails(txt); }, (err) => {}).catch(err => alert("相機開啟失敗"));
+            if(!html5QrcodeScanner) {
+                html5QrcodeScanner = new Html5Qrcode("reader");
+            }
+            html5QrcodeScanner.start(
+                { facingMode: "environment" },
+                { fps: 10, qrbox: { width: 250, height: 250 } },
+                (qrText) => {
+                    html5QrcodeScanner.stop();
+                    fetchOrderDetails(qrText);
+                },
+                (err) => {}
+            ).catch(err => alert("相機啟動失敗，請檢查權限！"));
+        }
+
+        // 撈取單筆訂單詳情
+        function fetchOrderDetails(orderId) {
+            const target = orderId.trim(); if(!target) return;
+            const o = allOrders.find(item => item.id === target);
+            if(!o) { alert("找不到該筆線上預訂單號！"); return; }
+            
+            document.getElementById("det-id").innerText = o.id;
+            document.getElementById("det-status").innerText = o.status;
+            document.getElementById("det-status").className = o.status === "已完成" ? 
+                "px-2 py-0.5 rounded text-[10px] font-bold bg-green-950 text-green-400" : 
+                "px-2 py-0.5 rounded text-[10px] font-bold bg-yellow-950 text-yellow-400";
+            
+            document.getElementById("det-items").innerText = o.items;
+            document.getElementById("det-amount").innerText = o.amount;
+            document.getElementById("det-date").innerText = o.pickupDate;
+            document.getElementById("det-payment").innerText = o.paymentMethod || "未定義";
+            document.getElementById("det-note").innerText = o.note || "無";
+            
+            const btn = document.getElementById("btn-complete-order");
+            if(o.status === "已完成") {
+                btn.disabled = true; btn.className = "w-full bg-gray-700 text-gray-500 py-2 rounded-xl text-xs"; btn.innerText = "此訂單已於現場交貨完成";
+            } else {
+                btn.disabled = false; btn.className = "w-full bg-green-600 text-white py-2 rounded-xl font-bold hover:bg-green-700 text-xs"; btn.innerText = "確認現場收款與交貨";
+            }
+            document.getElementById("order-detail-box").classList.remove("hidden");
+        }
+
+        // 線上預訂單現場交貨核銷
+        function completeOrder() {
+            const id = document.getElementById("det-id").innerText; if(!id) return;
+            const btn = document.getElementById("btn-complete-order"); btn.disabled = true; btn.innerText = "核銷更新中...";
+            
+            fetch(GAS_API, { method: "POST", body: JSON.stringify({ action: "completeOrder", id: id, username: currentStaff }) })
+            .then(res => res.json()).then(res => {
+                alert(res.message); document.getElementById("order-detail-box").classList.add("hidden"); refreshData();
+            });
         }
     </script>
 </body>
