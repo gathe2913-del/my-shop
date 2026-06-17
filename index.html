@@ -34,7 +34,7 @@
         <div class="flex space-x-2 overflow-x-auto pb-2 no-scrollbar sticky top-20 z-30 bg-gray-950 pt-2" id="category-bar"></div>
 
         <div class="space-y-3" id="product-list">
-            <div class="text-center py-12 text-gray-500 text-xs tracking-wider">正在為您準備今日鮮花與甜品項目...</div>
+            <div class="text-center py-12 text-gray-500 text-xs tracking-wider">正在為您準備今日項目...</div>
         </div>
 
     </main>
@@ -84,7 +84,7 @@
                 </div>
                 <div>
                     <label class="text-gray-400 block mb-1">備註 / 特殊需求說明</label>
-                    <input type="text" id="cust-note" placeholder="例如：包裝緞帶要藍色 / 祝賀卡片內容..." class="w-full p-3 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-600 focus:outline-none">
+                    <input type="text" id="cust-note" placeholder="例如：包裝需求、祝賀內容..." class="w-full p-3 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-600 focus:outline-none">
                 </div>
             </div>
 
@@ -117,7 +117,10 @@
         let cart = {}; 
         let currentCategory = "全部";
         let minRequiredDays = 0;
-        let globalCartPrice = 0; // ✨ 建立全域總價變數，防止後端回傳時欄位漏失
+        let globalCartPrice = 0;
+
+        // 當圖片網址空白或載入失敗時，使用的質感 SVG 占位圖（深灰色背景 + 圖片 icon）
+        const defaultPlaceholderSvg = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 24 24" fill="none" stroke="%234B5563" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="background-color:%231F2937;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`;
 
         window.addEventListener("DOMContentLoaded", () => {
             const today = new Date();
@@ -128,7 +131,6 @@
         });
 
         function fetchFrontendData() {
-            // 加上隨機參數防止舊圖片被瀏覽器快取（快取快照機制快取住了）
             fetch(`${GAS_API}?t=${new Date().getTime()}`)
                 .then(res => res.json())
                 .then(res => {
@@ -140,8 +142,8 @@
                         return;
                     }
 
-                    document.getElementById("shop-name").innerText = currentSettings.shopName || "浮光 FLOATING";
-                    document.getElementById("shop-sub-title").innerText = currentSettings.subTitle || "線上預訂系統";
+                    document.getElementById("shop-name").innerText = currentSettings.shopName || "線上點單系統";
+                    document.getElementById("shop-sub-title").innerText = currentSettings.subTitle || "線上預訂服務";
 
                     renderCategoryBar();
                     renderProductList();
@@ -153,7 +155,7 @@
 
         function renderCategoryBar() {
             const bar = document.getElementById("category-bar");
-            const rawCats = currentSettings.categories || "花藝,甜品";
+            const rawCats = currentSettings.categories || "預設";
             const cats = ["全部", ...rawCats.split(",").map(c => c.trim()).filter(Boolean)];
             
             bar.innerHTML = "";
@@ -191,12 +193,12 @@
                 let hintText = p.stock === -1 ? `🕒 接單製作 (需提前 ${p.daysRequired} 天預訂)` : `📦 現貨供應 (剩餘 ${p.stock} 件)`;
                 const isSoldOut = p.stock !== -1 && p.stock <= 0;
 
-                // 防止 GAS 的雲端相簿快取破圖，加上出錯預備圖
-                const imgUrl = p.imageUrl || "https://images.unsplash.com/photo-1526047932273-341f2a7631f9?w=200";
+                // 若資料庫內 imageUrl 為空，直接使用 SVG 占位圖
+                const imgUrl = p.imageUrl ? p.imageUrl : defaultPlaceholderSvg;
 
                 const itemHtml = `
                     <div class="bg-gray-900 border border-gray-800 rounded-2xl p-3 flex space-x-3 items-center">
-                        <img src="${imgUrl}" onerror="this.src='https://images.unsplash.com/photo-1526047932273-341f2a7631f9?w=200'" class="w-20 h-20 object-cover rounded-xl shadow bg-gray-800 flex-shrink-0">
+                        <img src="${imgUrl}" onerror="this.src='${defaultPlaceholderSvg}'" class="w-20 h-20 object-cover rounded-xl shadow bg-gray-800 flex-shrink-0">
                         <div class="flex-1 min-w-0 space-y-1">
                             <h4 class="text-sm font-bold text-white truncate">${p.name}</h4>
                             <p class="text-[10px] text-gray-400 line-clamp-1">${p.note || '精選推薦'}</p>
@@ -263,7 +265,7 @@
             });
 
             minRequiredDays = maxDays;
-            globalCartPrice = totalPrice; // ✨ 鎖定前端計算出的金額
+            globalCartPrice = totalPrice;
 
             const cartBar = document.getElementById("cart-bar");
             if (totalQty > 0) {
@@ -353,7 +355,6 @@
                 .then(res => {
                     if (res.status === "success") {
                         closeCartModal();
-                        // ✨ 修正點：金額改由前端 globalCartPrice 直接帶入，保證絕對不會出現 undefined
                         showSuccessScreen(res.orderId, date, globalCartPrice);
                         cart = {};
                         calculateCart();
@@ -374,9 +375,8 @@
         function showSuccessScreen(orderId, date, amount) {
             document.getElementById("succ-id").innerText = orderId;
             document.getElementById("succ-date").innerText = date;
-            document.getElementById("succ-amount").innerText = amount; // 帶入正確總價
+            document.getElementById("succ-amount").innerText = amount;
 
-            // 隱藏背後的主容器，避免穿透疊加
             document.getElementById("main-content-area").classList.add("hidden");
             document.getElementById("cart-bar").classList.add("hidden");
 
@@ -390,7 +390,6 @@
                 correctLevel: QRCode.CorrectLevel.H
             });
 
-            // 秀出完全獨立的全螢幕彈窗
             document.getElementById("success-modal").classList.remove("hidden");
         }
     </script>

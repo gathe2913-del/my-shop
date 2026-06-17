@@ -5,11 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>浮光後台管理系統 - 終極修復完美版</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
-    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
     <style>
         .nav-active { background-color: #374151; border-left-width: 4px; border-color: #FBBF24; color: #FBBF24; font-weight: bold; }
-        /* 側邊欄平滑滑動動畫 */
         .sidebar-transition { transition: transform 0.3s ease-in-out; }
+        /* 修正 html5-qrcode 內部控制項，使其符合深色系 gentleman 風格 */
+        #reader { border: none !important; background: #111827 !important; }
+        #reader__dashboard_section_csr button { background-color: #4b5563 !important; color: white !important; border-radius: 0.5rem !important; padding: 4px 10px !important; font-size: 11px !important; border: 1px solid #6b7280 !important; }
+        #reader video { border-radius: 12px !important; }
     </style>
 </head>
 <body class="bg-gray-900 text-gray-100 min-h-screen font-sans flex flex-col">
@@ -91,62 +94,75 @@
             <div id="panel-cashier" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div class="space-y-4">
                     <h3 class="text-sm font-bold text-gray-300">核銷線上預訂訂單</h3>
-                    <div class="bg-gray-800 p-4 rounded-xl border border-gray-700">
-                        <div id="reader" style="width: 100%; background: #000; border-radius: 12px; overflow: hidden;"></div>
-                        <button onclick="startScan()" class="w-full mt-3 bg-indigo-600 text-white py-2 rounded-xl text-xs font-medium">開啟相機掃描 QR Code</button>
+                    
+                    <div class="bg-gray-900 p-4 rounded-xl border border-gray-800 space-y-3 shadow-inner">
+                        <div id="reader" class="w-full"></div>
+                        <button id="btn-camera-ctrl" onclick="toggleCameraScanner()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-2.5 rounded-xl text-xs font-bold tracking-wider transition">
+                            📷 開啟相機進行即時掃描
+                        </button>
+                        
+                        <div class="border border-dashed border-gray-700 hover:border-gray-500 rounded-xl p-3 text-center transition relative bg-gray-950">
+                            <p class="text-xs text-gray-400">📁 點擊此處匯入手機相簿照片核銷</p>
+                            <input type="file" accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer" onchange="scanImageFromGallery(this)">
+                        </div>
                     </div>
+
                     <div class="flex space-x-2">
-                        <input type="text" id="manual-order-id" placeholder="輸入訂單號 ORD-..." class="flex-1 p-2 bg-gray-800 border border-gray-700 rounded-xl text-xs text-white">
-                        <button onclick="fetchOrderDetails(document.getElementById('manual-order-id').value)" class="bg-gray-600 px-4 rounded-xl text-xs">查詢</button>
+                        <input type="text" id="manual-order-id" placeholder="輸入或貼上訂單號 ORD-..." class="flex-1 p-3 bg-gray-800 border border-gray-700 rounded-xl text-xs text-white font-mono focus:outline-none">
+                        <button onclick="fetchOrderDetails(document.getElementById('manual-order-id').value.trim())" class="bg-gray-700 hover:bg-gray-600 px-5 rounded-xl text-xs font-bold transition">查詢</button>
                     </div>
-                    <div id="order-detail-box" class="hidden border border-yellow-500 rounded-2xl p-4 bg-gray-800 space-y-2 text-xs">
-                        <div class="flex justify-between border-b border-gray-700 pb-2">
-                            <span class="font-bold text-yellow-400 text-sm" id="det-id"></span>
+
+                    <div id="order-detail-box" class="hidden border border-yellow-500 rounded-2xl p-5 bg-gray-900 space-y-3 text-xs shadow-xl">
+                        <div class="flex justify-between border-b border-gray-800 pb-2">
+                            <span class="font-bold text-yellow-400 text-sm font-mono" id="det-id"></span>
                             <span class="px-2 py-0.5 rounded text-[10px] font-bold" id="det-status"></span>
                         </div>
-                        <p><strong>品項明細：</strong> <span id="det-items" class="text-white"></span></p>
-                        <p><strong>應收金額：</strong> <span class="text-green-400 font-bold text-base" id="det-amount"></span> 元</p>
-                        <p><strong>取貨日期：</strong> <span id="det-date" class="text-yellow-400"></span></p>
-                        <p><strong>付款模式：</strong> <span id="det-payment"></span></p>
-                        <p class="text-[11px] text-gray-400">備註：<span id="det-note"></span></p>
-                        <button id="btn-complete-order" onclick="completeOrder()" class="w-full bg-green-600 text-white py-2 rounded-xl font-bold hover:bg-green-700">確認現場收款與交貨</button>
+                        <p class="text-gray-300"><strong>品項明細：</strong> <span id="det-items" class="text-white font-bold"></span></p>
+                        <p class="text-gray-300"><strong>應收金額：</strong> <span class="text-green-400 font-bold text-base font-mono" id="det-amount"></span> 元</p>
+                        <p class="text-gray-300"><strong>取貨日期：</strong> <span id="det-date" class="text-yellow-400"></span></p>
+                        <p class="text-gray-300"><strong>付款模式：</strong> <span id="det-payment" class="text-gray-400"></span></p>
+                        <p class="text-[11px] text-gray-400 border-t border-gray-800 pt-2">聯絡資訊與備註：<br><span id="det-note" class="text-gray-300 block mt-1"></span></p>
+                        <button id="btn-complete-order" onclick="executeCompleteOrder()" class="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-bold tracking-widest text-xs transition shadow-md">
+                            確認現場收款與交貨（變更為已完成）
+                        </button>
                     </div>
                 </div>
-                <div class="bg-gray-900 border border-gray-800 p-5 rounded-2xl space-y-3">
+
+                <div class="bg-gray-900 border border-gray-800 p-5 rounded-2xl space-y-3 shadow">
                     <h3 class="text-sm font-bold text-yellow-400">現場直接收銀點單</h3>
                     <div class="space-y-2">
                         <label class="text-xs text-gray-400">選擇現場購買品項</label>
-                        <select id="cashier-select-prod" class="w-full p-2 bg-gray-800 border border-gray-700 rounded-lg text-xs"></select>
+                        <select id="cashier-select-prod" class="w-full p-2.5 bg-gray-800 border border-gray-700 rounded-lg text-xs text-white"></select>
                     </div>
                     <div class="flex space-x-2">
                         <div class="flex-1">
                             <label class="text-xs text-gray-400">數量</label>
-                            <input type="number" id="cashier-qty" value="1" min="1" class="w-full p-2 bg-gray-800 border border-gray-700 rounded-lg text-xs text-center">
+                            <input type="number" id="cashier-qty" value="1" min="1" class="w-full p-2.5 bg-gray-800 border border-gray-700 rounded-lg text-xs text-white text-center">
                         </div>
                         <div class="flex-1">
                             <label class="text-xs text-gray-400">支付方式</label>
-                            <select id="cashier-payment" class="w-full p-2 bg-gray-800 border border-gray-700 rounded-lg text-xs">
+                            <select id="cashier-payment" class="w-full p-2.5 bg-gray-800 border border-gray-700 rounded-lg text-xs text-white">
                                 <option value="現場現金">現場現金</option>
                                 <option value="現場轉帳">現場轉帳</option>
                                 <option value="LINE Pay">LINE Pay</option>
                             </select>
                         </div>
                     </div>
-                    <button onclick="submitCashierOrder()" id="btn-cashier-submit" class="w-full bg-green-600 text-white py-2.5 rounded-xl font-bold text-xs tracking-wider">直接結帳並扣減庫存</button>
+                    <button onclick="submitCashierOrder()" id="btn-cashier-submit" class="w-full bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-xl font-bold text-xs tracking-wider transition shadow-md">直接結帳並扣減庫存</button>
                 </div>
             </div>
 
             <div id="panel-orders" class="hidden space-y-4">
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                    <h3 class="text-base font-bold tracking-wide">訂單流水帳記錄</h3>
+                    <h3 class="text-sm font-bold text-gray-300">訂單流水帳記錄</h3>
                     <div class="flex space-x-2 text-xs w-full sm:w-auto overflow-x-auto pb-1">
                         <button id="btn-filter-all" onclick="filterOrders('全部')" class="px-3 py-2 rounded font-bold bg-gray-200 text-gray-900 shadow-md whitespace-nowrap">全部</button>
                         <button id="btn-filter-pending" onclick="filterOrders('處理中')" class="px-3 py-2 rounded bg-gray-800 text-gray-300 hover:bg-gray-700 whitespace-nowrap">處理中</button>
                         <button id="btn-filter-done" onclick="filterOrders('已完成')" class="px-3 py-2 rounded bg-gray-800 text-gray-300 hover:bg-gray-700 whitespace-nowrap">已完成</button>
                     </div>
                 </div>
-                <div class="bg-gray-900 border border-gray-800 rounded-2xl p-4 overflow-x-auto">
-                    <table class="w-full text-left text-xs min-w-[600px]">
+                <div class="bg-gray-900 border border-gray-800 rounded-2xl p-4 overflow-x-auto shadow">
+                    <table class="w-full text-left text-xs min-w-[750px]">
                         <thead>
                             <tr class="border-b border-gray-800 text-gray-400">
                                 <th class="pb-2">單號/時間</th>
@@ -163,60 +179,60 @@
             </div>
 
             <div id="panel-upload" class="hidden max-w-md space-y-4">
-                <h3 class="text-base font-bold tracking-wide">上架全新商品項目</h3>
-                <div class="bg-gray-800 p-5 rounded-2xl border border-gray-700 space-y-3">
+                <h3 class="text-sm font-bold text-gray-300">上架全新商品項目</h3>
+                <div class="bg-gray-900 p-5 rounded-2xl border border-gray-800 space-y-3 shadow">
                     <div class="grid grid-cols-2 gap-3 text-xs">
                         <div class="col-span-2">
                             <label class="text-gray-400">商品名稱</label>
-                            <input type="text" id="new-name" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg mt-1 text-white">
+                            <input type="text" id="new-name" class="w-full p-2.5 bg-gray-800 border border-gray-700 rounded-lg mt-1 text-white focus:outline-none">
                         </div>
                         <div>
                             <label class="text-gray-400">商品分類</label>
-                            <select id="new-category" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg mt-1 text-white"></select>
+                            <select id="new-category" class="w-full p-2.5 bg-gray-800 border border-gray-700 rounded-lg mt-1 text-white"></select>
                         </div>
                         <div>
                             <label class="text-gray-400">營運模式</label>
-                            <select id="stock-mode" onchange="toggleStockInput(this.value, 'new-stock-box', 'new-days-box')" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg mt-1 text-white">
+                            <select id="stock-mode" onchange="toggleStockInput(this.value, 'new-stock-box', 'new-days-box')" class="w-full p-2.5 bg-gray-800 border border-gray-700 rounded-lg mt-1 text-white">
                                 <option value="-1">接單製作 (預訂模式)</option>
                                 <option value="0">現場現貨 (控管庫存)</option>
                             </select>
                         </div>
                         <div>
                             <label class="text-gray-400">客戶售價</label>
-                            <input type="number" id="new-price" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg mt-1 text-white">
+                            <input type="number" id="new-price" class="w-full p-2.5 bg-gray-800 border border-gray-700 rounded-lg mt-1 text-white focus:outline-none">
                         </div>
                         <div>
                             <label class="text-gray-400">內部成本</label>
-                            <input type="number" id="new-cost" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg mt-1 text-white">
+                            <input type="number" id="new-cost" class="w-full p-2.5 bg-gray-800 border border-gray-700 rounded-lg mt-1 text-white focus:outline-none">
                         </div>
                         <div id="new-days-box" class="col-span-2">
                             <label class="text-gray-400">接單需要準備天數</label>
-                            <input type="number" id="new-days" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg mt-1 text-white" value="3">
+                            <input type="number" id="new-days" class="w-full p-2.5 bg-gray-800 border border-gray-700 rounded-lg mt-1 text-white" value="3">
                         </div>
                         <div id="new-stock-box" class="col-span-2 hidden">
                             <label class="text-gray-400">初始現貨庫存</label>
-                            <input type="number" id="new-stock" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg mt-1 text-white" value="10">
+                            <input type="number" id="new-stock" class="w-full p-2.5 bg-gray-800 border border-gray-700 rounded-lg mt-1 text-white" value="10">
                         </div>
                         <div class="col-span-2">
                             <label class="text-gray-400">商品描述備註</label>
-                            <textarea id="new-note" rows="2" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg mt-1 text-white" placeholder="詳細描述..."></textarea>
+                            <textarea id="new-note" rows="2" class="w-full p-2.5 bg-gray-800 border border-gray-700 rounded-lg mt-1 text-white placeholder-gray-600 focus:outline-none" placeholder="詳細描述..."></textarea>
                         </div>
                         <div class="col-span-2">
                             <label class="text-gray-400">上傳產品照片</label>
-                            <input type="file" id="new-image-file" accept="image/*" class="w-full p-1 bg-gray-700 border border-gray-600 rounded-lg mt-1 text-xs">
+                            <input type="file" id="new-image-file" accept="image/*" class="w-full p-1 bg-gray-800 border border-gray-700 rounded-lg mt-1 text-xs text-gray-400">
                         </div>
                     </div>
-                    <button onclick="uploadAndAddProduct()" id="btn-add-prod" class="w-full bg-green-600 text-white py-2 rounded-xl font-bold text-xs">確認上架</button>
+                    <button onclick="uploadAndAddProduct()" id="btn-add-prod" class="w-full bg-green-600 hover:bg-green-500 text-white py-2.5 rounded-xl font-bold text-xs transition shadow-md">確認上架</button>
                 </div>
             </div>
 
             <div id="panel-inventory" class="hidden space-y-4">
-                <h3 class="text-base font-bold tracking-wide">門市商品主檔與狀態維護</h3>
-                <div class="bg-gray-800 p-4 rounded-2xl border border-gray-700">
+                <h3 class="text-sm font-bold text-gray-300">門市商品主檔與狀態維護</h3>
+                <div class="bg-gray-900 p-4 rounded-2xl border border-gray-800 shadow">
                     <div class="overflow-x-auto">
-                        <table class="w-full text-left text-xs min-w-[650px]">
+                        <table class="w-full text-left text-xs min-w-[700px]">
                             <thead>
-                                <tr class="border-b border-gray-700 text-gray-400">
+                                <tr class="border-b border-gray-800 text-gray-400">
                                     <th class="pb-2">照片</th>
                                     <th class="pb-2">品項名稱</th>
                                     <th class="pb-2">大分類</th>
@@ -226,36 +242,36 @@
                                     <th class="pb-2 text-right">操作</th>
                                 </tr>
                             </thead>
-                            <tbody id="admin-table-body" class="divide-y divide-gray-700"></tbody>
+                            <tbody id="admin-table-body" class="divide-y divide-gray-800 text-gray-300"></tbody>
                         </table>
                     </div>
                 </div>
             </div>
 
             <div id="panel-settings" class="hidden max-w-md space-y-4">
-                <h3 class="text-base font-bold tracking-wide text-yellow-400">⚙️ 前台全局網頁動態控制面板</h3>
-                <div class="bg-gray-800 p-5 rounded-2xl border border-gray-700 space-y-4 text-xs">
+                <h3 class="text-sm font-bold text-yellow-400">⚙️ 前台全局網頁動態控制面板</h3>
+                <div class="bg-gray-900 p-5 rounded-2xl border border-gray-800 space-y-4 text-xs shadow">
                     <div>
                         <label class="text-gray-400 font-bold block mb-1">前台店鋪名稱</label>
-                        <input type="text" id="cfg-shop-name" class="w-full p-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white font-bold">
+                        <input type="text" id="cfg-shop-name" class="w-full p-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white font-bold focus:outline-none">
                     </div>
                     <div>
                         <label class="text-gray-400 font-bold block mb-1">前台副標題 / 營業公告</label>
-                        <input type="text" id="cfg-sub-title" class="w-full p-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white">
+                        <input type="text" id="cfg-sub-title" class="w-full p-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none">
                     </div>
                     <div>
                         <label class="text-gray-400 font-bold block mb-1">前台接單開關狀態</label>
-                        <select id="cfg-shop-status" class="w-full p-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white">
+                        <select id="cfg-shop-status" class="w-full p-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none">
                             <option value="營業中">🟢 正常營業中 (接受線上點單)</option>
                             <option value="暫停接單">🔴 門市暫停接單 (前台鎖定關閉)</option>
                         </select>
                     </div>
                     <div>
                         <label class="text-gray-400 font-bold block mb-1">前台分頁導覽欄位 (大分類)</label>
-                        <input type="text" id="cfg-categories" class="w-full p-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white font-mono" placeholder="以英文逗號隔開，例如：花藝,甜品,手作課程">
-                        <p class="text-[10px] text-gray-500 mt-1">💡 只要在這裡增加或修改分類（用英文逗號隔開），前台的分頁選單、新增商品的下拉選單就會秒速同步，完全不需動到程式碼！</p>
+                        <input type="text" id="cfg-categories" class="w-full p-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white font-mono focus:outline-none" placeholder="以英文逗號隔開，例如：花藝,甜品,手作課程">
+                        <p class="text-[10px] text-gray-500 mt-1">💡 系統會自動解析大分類，分頁選單將自動同步。</p>
                     </div>
-                    <button onclick="saveGlobalSettings()" id="btn-save-settings" class="w-full bg-yellow-500 text-gray-900 py-3 rounded-xl font-bold text-xs tracking-widest hover:bg-yellow-400 transition shadow-lg">發布變更至前台網頁</button>
+                    <button onclick="saveGlobalSettings()" id="btn-save-settings" class="w-full bg-yellow-500 hover:bg-yellow-400 text-gray-950 py-3 rounded-xl font-bold text-xs tracking-widest transition shadow-lg">發布變更至前台網頁</button>
                 </div>
             </div>
 
@@ -308,14 +324,14 @@
                 <div class="col-span-2">
                     <label class="text-gray-400">更新產品照片</label>
                     <div class="flex items-center space-x-2 mt-1">
-                        <img id="edit-img-preview" class="w-10 h-10 object-cover rounded border border-gray-600">
-                        <input type="file" id="edit-image-file" accept="image/*" class="flex-1 p-1 bg-gray-700 border border-gray-600 rounded text-xs">
+                        <img id="edit-img-preview" class="w-10 h-10 object-cover rounded border border-gray-600 bg-gray-900">
+                        <input type="file" id="edit-image-file" accept="image/*" class="flex-1 p-1 bg-gray-700 border border-gray-600 rounded text-xs text-gray-400">
                     </div>
                 </div>
             </div>
             <div class="flex space-x-2 pt-2">
-                <button onclick="closeEditModal()" class="flex-1 bg-gray-600 py-2 rounded-xl text-xs">取消</button>
-                <button onclick="submitEditProduct()" id="btn-save-edit" class="flex-1 bg-yellow-500 text-gray-900 py-2 rounded-xl text-xs font-bold">儲存修改</button>
+                <button onclick="closeEditModal()" class="flex-1 bg-gray-600 py-2 rounded-xl text-xs hover:bg-gray-500 transition">取消</button>
+                <button onclick="submitEditProduct()" id="btn-save-edit" class="flex-1 bg-yellow-500 text-gray-900 py-2 rounded-xl text-xs font-bold hover:bg-yellow-400 transition">儲存修改</button>
             </div>
         </div>
     </div>
@@ -324,24 +340,23 @@
         let currentStaff = ""; let base64Image = ""; let imageName = "";
         let editBase64Image = ""; let editImageName = "";
         let allProducts = []; let allOrders = []; let currentSettings = {};
-        
-        // ✨ 全局篩選鎖：預設看全部
         let currentFilterStatus = "全部"; 
+        
+        // ✨ QR Code 掃描器全域實例
+        let html5QrCode = null; 
+        let isCameraScanning = false;
+        const defaultPlaceholderSvg = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="%234B5563" stroke-width="1"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`;
 
-        // 📱 控制手機版選單滑動彈出
         function toggleSidebar(open) {
             const sidebar = document.getElementById('admin-sidebar');
             const overlay = document.getElementById('sidebar-overlay');
             if (open) {
-                sidebar.classList.remove('-translate-x-full');
-                overlay.classList.remove('hidden');
+                sidebar.classList.remove('-translate-x-full'); overlay.classList.remove('hidden');
             } else {
-                sidebar.classList.add('-translate-x-full');
-                overlay.classList.add('hidden');
+                sidebar.classList.add('-translate-x-full'); overlay.classList.add('hidden');
             }
         }
 
-        // 監聽圖片選擇轉換 Base64
         document.getElementById('new-image-file').addEventListener('change', function(e) {
             const file = e.target.files[0]; if (!file) return;
             imageName = file.name; const reader = new FileReader();
@@ -351,10 +366,9 @@
         document.getElementById('edit-image-file').addEventListener('change', function(e) {
             const file = e.target.files[0]; if (!file) return;
             editImageName = file.name; const reader = new FileReader();
-            reader.onload = function(evt) { editBase64Image = evt.target.result; }; reader.readAsDataURL(file);
+            reader.onload = function(evt) { editBase64Image = evt.target.result; document.getElementById("edit-img-preview").src = evt.target.result; }; reader.readAsDataURL(file);
         });
 
-        // 登入功能
         function login() {
             const user = document.getElementById("username").value.trim(); if(!user) return;
             fetch(GAS_API, { method: "POST", body: JSON.stringify({ action: "login", username: user }) })
@@ -362,79 +376,59 @@
                 if(res.status === "success") {
                     currentStaff = user; 
                     document.getElementById("current-user-tag").innerText = res.name;
-                    document.getElementById("current-user-tag-mobile").innerText = res.name; // 手機版同步寫入
+                    document.getElementById("current-user-tag-mobile").innerText = res.name;
                     document.getElementById("login-box").classList.add("hidden"); 
                     document.getElementById("main-admin").classList.remove("hidden");
                     refreshData();
                 } else { alert(res.message); }
-            });
+            }).catch(() => alert("門市後台系統連線中斷"));
         }
 
-        // 後台頁籤切換
         function switchTab(tabId) {
+            // 切換分頁時，如果相機正開著，順手幫店員關閉相機釋放權限
+            if (isCameraScanning) { stopCameraScanner(); }
+            
             ["cashier", "orders", "upload", "inventory", "settings"].forEach(t => {
                 document.getElementById(`panel-${t}`).classList.add("hidden");
                 document.getElementById(`tab-${t}`).className = "flex items-center space-x-3 w-full p-3 rounded-xl text-gray-400 text-left hover:bg-gray-800";
             });
             document.getElementById(`panel-${tabId}`).classList.remove("hidden");
             document.getElementById(`tab-${tabId}`).className = "nav-active flex items-center space-x-3 w-full p-3 rounded-xl text-left";
-            
-            // 📱 切換頁籤後，手機版選單要自動縮回去
             toggleSidebar(false);
             refreshData();
         }
 
-        // 控管庫存與接單天數欄位顯示
         function toggleStockInput(val, stockId, daysId) {
             if(val === "-1") {
-                document.getElementById(stockId).classList.add("hidden");
-                document.getElementById(daysId).classList.remove("hidden");
+                document.getElementById(stockId).classList.add("hidden"); document.getElementById(daysId).classList.remove("hidden");
             } else {
-                document.getElementById(stockId).classList.remove("hidden");
-                document.getElementById(daysId).classList.add("hidden");
+                document.getElementById(stockId).classList.remove("hidden"); document.getElementById(daysId).classList.add("hidden");
             }
         }
 
-        // 核心同步更新：撈取最新大盤並維持使用者目前的訂單分頁
         function refreshData() {
             fetch(GAS_API).then(res => res.json()).then(res => {
-                allProducts = res.products;
-                allOrders = res.orders;
-                currentSettings = res.settings;
+                allProducts = res.products || []; allOrders = res.orders || []; currentSettings = res.settings || {};
                 
-                // 寫入全局配置控制元件
                 document.getElementById("cfg-shop-name").value = currentSettings.shopName || "";
                 document.getElementById("cfg-sub-title").value = currentSettings.subTitle || "";
                 document.getElementById("cfg-categories").value = currentSettings.categories || "花藝,甜品";
                 document.getElementById("cfg-shop-status").value = currentSettings.shopStatus || "營業中";
 
-                updateCategoryDropdowns();
-                calculateDashboard();
-                renderCashierSelect();
-                renderInventoryTable();
-                
-                // 刷新後，根據全域鎖決定渲染畫面，不洗回全部
-                applyCurrentFilter();
-            });
+                updateCategoryDropdowns(); calculateDashboard(); renderCashierSelect(); renderInventoryTable(); applyCurrentFilter();
+            }).catch(e => console.error("同步大盤失敗:", e));
         }
 
-        // 動態生成前台大分類的選單選項
         function updateCategoryDropdowns() {
             const cats = (currentSettings.categories || "花藝,甜品").split(",");
-            const upSelect = document.getElementById("new-category");
-            const edSelect = document.getElementById("edit-category");
-            
+            const upSelect = document.getElementById("new-category"); const edSelect = document.getElementById("edit-category");
             let html = "";
             cats.forEach(c => { if(c.trim()) html += `<option value="${c.trim()}">${c.trim()}</option>`; });
-            upSelect.innerHTML = html;
-            edSelect.innerHTML = html;
+            upSelect.innerHTML = html; edSelect.innerHTML = html;
         }
 
-        // 儲存全局前台動態配置至雲端
         function saveGlobalSettings() {
-            const btn = document.getElementById("btn-save-settings");
-            btn.disabled = true; btn.innerText = "正在同步發布至雲端...";
-            
+            const btn = document.getElementById("btn-save-settings"); btn.disabled = true; btn.innerText = "佈署至前端網頁中...";
             const payload = {
                 action: "updateSettings",
                 settings: {
@@ -444,14 +438,11 @@
                     shopStatus: document.getElementById("cfg-shop-status").value
                 }
             };
-
             fetch(GAS_API, { method: "POST", body: JSON.stringify(payload) }).then(res => res.json()).then(res => {
-                alert(res.message); btn.disabled = false; btn.innerText = "發布變更至前台網頁";
-                refreshData();
+                alert(res.message); btn.disabled = false; btn.innerText = "發布變更至前台網頁"; refreshData();
             });
         }
 
-        // 算大盤營收毛利
         function calculateDashboard() {
             let rev = 0; let prof = 0; let pend = 0;
             allOrders.forEach(o => {
@@ -463,7 +454,6 @@
             document.getElementById("dash-pending").innerText = pend;
         }
 
-        // 收銀台下拉
         function renderCashierSelect() {
             const select = document.getElementById("cashier-select-prod"); select.innerHTML = "";
             allProducts.forEach(p => {
@@ -474,47 +464,38 @@
             });
         }
 
-        // 現場直接收銀
         function submitCashierOrder() {
             const pId = document.getElementById("cashier-select-prod").value;
             const qty = Number(document.getElementById("cashier-qty").value);
             const pay = document.getElementById("cashier-payment").value;
             if(!pId || qty < 1) return;
 
-            document.getElementById("btn-cashier-submit").disabled = true;
+            const btn = document.getElementById("btn-cashier-submit");
+            btn.disabled = true; btn.innerText = "現場扣減交易中...";
+            
             const payload = {
                 action: "createOrder", isCashier: true, username: currentStaff,
-                paymentMethod: pay, pickupDate: new Date().toLocaleDateString(), note: "店員現場收銀結帳",
+                paymentMethod: pay, pickupDate: "現場直接購買", note: "店員收銀台現貨直接結帳",
                 items: [{ id: pId, qty: qty }]
             };
 
             fetch(GAS_API, { method: "POST", body: JSON.stringify(payload) }).then(res => res.json()).then(res => {
-                alert(res.message); document.getElementById("btn-cashier-submit").disabled = false; refreshData();
+                alert(res.message); btn.disabled = false; btn.innerText = "直接結帳並扣減庫存"; refreshData();
             });
         }
 
-        // 觸發分類按鈕
-        function filterOrders(status) {
-            currentFilterStatus = status; 
-            applyCurrentFilter();
-        }
+        function filterOrders(status) { currentFilterStatus = status; applyCurrentFilter(); }
 
-        // 依照狀態渲染，並加上按鈕高亮
         function applyCurrentFilter() {
             updateFilterButtonStyles(currentFilterStatus);
-            if (currentFilterStatus === "全部") {
-                renderOrderTable(allOrders);
-            } else {
-                renderOrderTable(allOrders.filter(o => o.status === currentFilterStatus));
-            }
+            if (currentFilterStatus === "全部") { renderOrderTable(allOrders); } 
+            else { renderOrderTable(allOrders.filter(o => o.status === currentFilterStatus)); }
         }
 
-        // 控制篩選按鈕高亮 Tailwind
         function updateFilterButtonStyles(activeStatus) {
             const btnAll = document.getElementById("btn-filter-all");
             const btnPending = document.getElementById("btn-filter-pending");
             const btnDone = document.getElementById("btn-filter-done");
-
             if (!btnAll || !btnPending || !btnDone) return;
 
             const reset = (btn) => { btn.className = "px-3 py-2 rounded bg-gray-800 text-gray-300 hover:bg-gray-700 transition whitespace-nowrap"; };
@@ -525,65 +506,239 @@
             if (activeStatus === "已完成") btnDone.className = "px-3 py-2 rounded font-bold bg-green-500 text-gray-900 shadow-md whitespace-nowrap";
         }
 
-        // 渲染流水帳表格
         function renderOrderTable(dataList) {
             const tbody = document.getElementById("order-table-body"); tbody.innerHTML = "";
             dataList.forEach(o => {
                 let badge = o.status === "已完成" ? 
-                    `<span class="bg-green-950 text-green-400 px-2 py-0.5 rounded text-[10px]">已完成</span>` :
-                    `<span class="bg-yellow-950 text-yellow-400 px-2 py-0.5 rounded text-[10px]">處理中</span>`;
+                    `<span class="bg-green-950 text-green-400 px-2 py-0.5 rounded text-[10px] border border-green-900">已完成</span>` : 
+                    `<span class="bg-yellow-950 text-yellow-500 px-2 py-0.5 rounded text-[10px] border border-yellow-800">處理中</span>`;
+                
                 tbody.innerHTML += `
-                    <tr class="hover:bg-gray-800 border-b border-gray-800">
-                        <td class="py-2.5 font-mono"><strong>${o.id}</strong><br><span class="text-gray-500 text-[10px]">${o.timestamp}</span></td>
-                        <td class="py-2.5 text-white">${o.items}<br><span class="text-[10px] text-gray-500">${o.note}</span></td>
-                        <td class="py-2.5 font-mono text-green-400">$${o.amount}<br><span class="text-gray-500 text-[10px]">利:$${o.profit}</span></td>
-                        <td class="py-2.5 text-yellow-500">${o.pickupDate}</td>
-                        <td class="py-2.5">${badge}</td>
-                        <td class="py-2.5 text-gray-400">${o.handler || '-'}</td>
+                    <tr class="hover:bg-gray-900 transition">
+                        <td class="py-3 pr-2 font-mono"><p class="text-white font-bold">${o.id}</p><p class="text-[10px] text-gray-500">${o.timestamp}</p></td>
+                        <td class="py-3 text-[11px] pr-2 max-w-xs truncate">${o.items}</td>
+                        <td class="py-3 font-mono"><p class="text-green-400 font-bold">$${o.amount}</p><p class="text-[10px] text-gray-400">毛利:$${o.profit}</p></td>
+                        <td class="py-3 text-yellow-500 font-mono">${o.pickupDate}</td>
+                        <td class="py-3">${badge}</td>
+                        <td class="py-3 text-xs font-bold text-gray-400">${o.handler || "線上自主"}</td>
                     </tr>
                 `;
             });
         }
 
-        // 渲染商品管理清單 (防止圖片破圖優化版)
+        // ======= ✨ 核心修正：開啟與隨時「關閉相機」的控制模組 =======
+        function toggleCameraScanner() {
+            if (isCameraScanning) {
+                stopCameraScanner();
+            } else {
+                startCameraScanner();
+            }
+        }
+
+        function startCameraScanner() {
+            isCameraScanning = true;
+            const ctrlBtn = document.getElementById("btn-camera-ctrl");
+            ctrlBtn.innerText = "✕ 關閉內部相機鏡頭";
+            ctrlBtn.className = "w-full bg-red-600 hover:bg-red-500 text-white py-2.5 rounded-xl text-xs font-bold tracking-wider transition shadow-md";
+
+            if (!html5QrCode) {
+                html5QrCode = new Html5Qrcode("reader");
+            }
+
+            html5QrCode.start(
+                { facingMode: "environment" },
+                { fps: 10, qrbox: { width: 250, height: 250 } },
+                (decodedText) => {
+                    // 掃描成功！自動帶入單號並關相機
+                    document.getElementById("manual-order-id").value = decodedText;
+                    stopCameraScanner();
+                    fetchOrderDetails(decodedText);
+                },
+                (errorMessage) => { /* 靜態排除持續偵測期間的背景雜訊過濾日誌 */ }
+            ).catch(err => {
+                console.error("啟動相機發生嚴重攔截:", err);
+                alert("開啟鏡頭失敗，請檢查瀏覽器相機權限是否開啟！");
+                stopCameraScanner();
+            });
+        }
+
+        function stopCameraScanner() {
+            isCameraScanning = false;
+            const ctrlBtn = document.getElementById("btn-camera-ctrl");
+            ctrlBtn.innerText = "📷 開啟相機進行即時掃描";
+            ctrlBtn.className = "w-full bg-indigo-600 hover:bg-indigo-500 text-white py-2.5 rounded-xl text-xs font-bold tracking-wider transition shadow-md";
+
+            if (html5QrCode) {
+                html5QrCode.stop().then(() => {
+                    document.getElementById("reader").innerHTML = ""; // 清空殘留畫面
+                }).catch(err => console.error("關閉相機異常:", err));
+            }
+        }
+
+        // ======= ✨ 新增功能：從手機圖庫/相簿選取照片辨識 QR Code =======
+        function scanImageFromGallery(inputElement) {
+            if (inputElement.files.length === 0) return;
+            const file = inputElement.files[0];
+
+            if (!html5QrCode) {
+                html5QrCode = new Html5Qrcode("reader");
+            }
+
+            // 呼叫 html5-qrcode 檔案解析底層 API
+            html5QrCode.scanFile(file, true)
+                .then(decodedText => {
+                    document.getElementById("manual-order-id").value = decodedText;
+                    fetchOrderDetails(decodedText);
+                })
+                .catch(err => {
+                    console.error("相簿照片解析出錯:", err);
+                    alert("無法在該照片中識別出有效的 QR Code，請確認照片清晰無反光！");
+                });
+        }
+
+        // ======= 查詢單筆訂單數據詳情 =======
+        function fetchOrderDetails(orderId) {
+            if(!orderId) { alert("請輸入或掃描單號！"); return; }
+            
+            const detailBox = document.getElementById("order-detail-box");
+            detailBox.classList.remove("hidden");
+            detailBox.className = "border border-yellow-500 rounded-2xl p-5 bg-gray-900 space-y-3 text-xs shadow-xl animate-pulse";
+            document.getElementById("det-id").innerText = "後台對接雲端帳目中...";
+
+            // 包裝 action: scanOrder 協定
+            fetch(GAS_API, { method: "POST", body: JSON.stringify({ action: "scanOrder", orderId: orderId }) })
+            .then(res => res.json()).then(res => {
+                detailBox.classList.remove("animate-pulse");
+                if(res.status === "success") {
+                    const o = res.order;
+                    document.getElementById("det-id").innerText = o.orderId;
+                    document.getElementById("det-items").innerText = o.items;
+                    document.getElementById("det-amount").innerText = o.amount;
+                    document.getElementById("det-date").innerText = o.pickupDate;
+                    document.getElementById("det-payment").innerText = o.paymentMethod;
+                    document.getElementById("det-note").innerText = o.note;
+                    
+                    const statusTag = document.getElementById("det-status");
+                    const btnComplete = document.getElementById("btn-complete-order");
+                    statusTag.innerText = o.status;
+
+                    if(o.status === "已完成") {
+                        statusTag.className = "px-2 py-0.5 rounded text-[10px] font-bold bg-green-950 text-green-400 border border-green-800";
+                        btnComplete.disabled = true; btnComplete.innerText = `🚨 此預訂單先前已被 [${o.handler}] 完成核銷`;
+                        btnComplete.className = "w-full bg-gray-800 text-gray-500 py-3 rounded-xl font-bold text-xs cursor-not-allowed";
+                    } else {
+                        statusTag.className = "px-2 py-0.5 rounded text-[10px] font-bold bg-yellow-950 text-yellow-500 border border-yellow-800";
+                        btnComplete.disabled = false; btnComplete.innerText = "確認現場收款與交貨（一鍵核銷變更）";
+                        btnComplete.className = "w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-bold tracking-widest text-xs transition shadow-md";
+                    }
+                } else {
+                    alert(res.message); detailBox.classList.add("hidden");
+                }
+            }).catch(() => { alert("後端接口傳輸超時"); detailBox.classList.add("hidden"); });
+        }
+
+        // ======= 執行一鍵核銷變更 =======
+        function executeCompleteOrder() {
+            const oId = document.getElementById("det-id").innerText;
+            if(!oId || oId.includes("後台")) return;
+
+            const btn = document.getElementById("btn-complete-order");
+            btn.disabled = true; btn.innerText = "試算表核心高效率覆寫狀態中...";
+
+            // 完美對接後台 `action: "completeOrder"` 優化機制
+            const payload = {
+                action: "completeOrder",
+                orderId: oId,
+                username: currentStaff
+            };
+
+            fetch(GAS_API, { method: "POST", body: JSON.stringify(payload) })
+            .then(res => res.json()).then(res => {
+                if(res.status === "success") {
+                    alert("🎉 訂單核銷變更成功！日誌已同步發布。");
+                    fetchOrderDetails(oId); // 重新渲染當前卡片
+                } else {
+                    alert("核心錯誤：" + res.message); btn.disabled = false;
+                }
+            });
+        }
+
+        // 上架新品項目
+        function uploadAndAddProduct() {
+            const name = document.getElementById("new-name").value.trim();
+            const cat = document.getElementById("new-category").value;
+            const mode = document.getElementById("stock-mode").value;
+            const price = document.getElementById("new-price").value;
+            const cost = document.getElementById("new-cost").value;
+            const days = document.getElementById("new-days").value;
+            const stock = document.getElementById("new-stock").value;
+            const note = document.getElementById("new-note").value.trim();
+
+            if(!name || !price || !cost) { alert("請填寫商品名稱、售價與成本！"); return; }
+            
+            const btn = document.getElementById("btn-add-prod");
+            btn.disabled = true; btn.innerText = "產品主檔與照片傳輸中...";
+
+            const payload = {
+                action: "addProduct", name: name, category: cat, price: price, cost: cost,
+                daysRequired: mode === "-1" ? days : "0",
+                stock: mode === "-1" ? "-1" : stock,
+                note: note, imageBlob: base64Image, imageName: imageName
+            };
+
+            fetch(GAS_API, { method: "POST", body: JSON.stringify(payload) }).then(res => res.json()).then(res => {
+                alert(res.message); btn.disabled = false; btn.innerText = "確認上架";
+                if(res.status === "success") {
+                    document.getElementById("new-name").value = ""; document.getElementById("new-price").value = "";
+                    document.getElementById("new-cost").value = ""; document.getElementById("new-note").value = "";
+                    document.getElementById("new-image-file").value = ""; base64Image = ""; imageName = "";
+                    switchTab('inventory');
+                }
+            });
+        }
+
+        // 渲染維護表格
         function renderInventoryTable() {
             const tbody = document.getElementById("admin-table-body"); tbody.innerHTML = "";
             allProducts.forEach(p => {
-                let statusStr = p.stock === -1 ? 
-                    `<span class="text-indigo-400 bg-indigo-950 px-2 py-0.5 rounded text-[10px] whitespace-nowrap">預訂 (製程:${p.daysRequired}天)</span>` : 
-                    `<span class="text-green-400 bg-green-950 px-2 py-0.5 rounded text-[10px] whitespace-nowrap">現貨: ${p.stock} 件</span>`;
+                let modeText = p.stock === -1 ? 
+                    `<span class="text-indigo-400 bg-indigo-950 px-2 py-0.5 rounded border border-indigo-900">🕒 預訂 (製程:${p.daysRequired}天)</span>` : 
+                    `<span class="text-yellow-400 bg-yellow-950 px-2 py-0.5 rounded border border-yellow-900">📦 現貨 (庫存:${p.stock}件)</span>`;
                 
-                let toggleBtn = p.status === "M" ?
-                    `<button onclick="toggleProductVisibility('${p.id}', 'H')" class="bg-gray-700 text-gray-300 px-2 py-1 rounded text-[11px] whitespace-nowrap">顯示中</button>` :
-                    `<button onclick="toggleProductVisibility('${p.id}', 'M')" class="bg-red-950 text-red-400 border border-red-800 px-2 py-1 rounded text-[11px] whitespace-nowrap">已隱藏</button>`;
+                let switchBtn = p.status === "M" ? 
+                    `<button onclick="toggleProductStatus('${p.id}', 'D')" class="text-green-400 font-bold hover:text-green-300">🟢 顯示中</button>` : 
+                    `<button onclick="toggleProductStatus('${p.id}', 'M')" class="text-red-500 font-bold hover:text-red-400">🔴 已隱藏</button>`;
+
+                const currentImg = p.imageUrl ? p.imageUrl : defaultPlaceholderSvg;
 
                 tbody.innerHTML += `
-                    <tr class="border-b border-gray-800 hover:bg-gray-800 transition text-gray-300">
-                        <td class="py-2.5"><img src="${p.imageUrl}" class="w-8 h-8 object-cover rounded shadow min-w-[32px]"></td>
-                        <td class="py-2.5 text-white font-medium text-xs">${p.name}</td>
-                        <td class="py-2.5"><span class="bg-gray-700 px-2 py-0.5 rounded text-[10px] whitespace-nowrap">${p.category}</span></td>
-                        <td class="py-2.5 font-mono text-xs text-yellow-400">$${p.price}<br><span class="text-gray-500 text-[10px]">本:$${p.cost}</span></td>
-                        <td class="py-2.5">${statusStr}</td>
-                        <td class="py-2.5">${toggleBtn}</td>
-                        <td class="py-2.5 text-right whitespace-nowrap">
-                            <button onclick="openEditModal('${p.id}')" class="bg-yellow-500 text-gray-900 px-2.5 py-1 rounded-md text-[11px] font-bold hover:bg-yellow-400">編輯</button>
+                    <tr class="border-b border-gray-800 hover:bg-gray-900 transition text-xs">
+                        <td class="py-2"><img src="${currentImg}" onerror="this.src='${defaultPlaceholderSvg}'" class="w-8 h-8 object-cover rounded bg-gray-950 border border-gray-700"></td>
+                        <td class="py-2 text-white font-bold">${p.name}</td>
+                        <td class="py-2 text-gray-400">${p.category}</td>
+                        <td class="py-2 font-mono"><span class="text-green-400">$${p.price}</span> / <span class="text-gray-500">$${p.cost}</span></td>
+                        <td class="py-2">${modeText}</td>
+                        <td class="py-2">${switchBtn}</td>
+                        <td class="py-2 text-right space-x-2">
+                            <button onclick="openEditModal('${p.id}')" class="text-blue-400 hover:underline">修改</button>
+                            <button onclick="deleteProduct('${p.id}')" class="text-red-400 hover:underline">刪除</button>
                         </td>
                     </tr>
                 `;
             });
         }
 
-        // 切換商品前台可見度 (顯示/隱藏)
-        function toggleProductVisibility(id, newStatus) {
-            const payload = { action: "toggleProduct", id: id, status: newStatus };
-            fetch(GAS_API, { method: "POST", body: JSON.stringify(payload) }).then(res => res.json()).then(res => {
-                refreshData();
-            });
+        function toggleProductStatus(id, targetStatus) {
+            const p = allProducts.find(prod => prod.id === id); if(!p) return;
+            const payload = {
+                action: "editProduct", id: id, name: p.name, category: p.category, price: p.price,
+                cost: p.cost, daysRequired: p.daysRequired, stock: p.stock, note: p.note, status: targetStatus
+            };
+            fetch(GAS_API, { method: "POST", body: JSON.stringify(payload) }).then(res => res.json()).then(res => { refreshData(); });
         }
 
-        // 開啟編輯視窗並填入舊資料
         function openEditModal(id) {
-            const p = allProducts.find(item => item.id === id); if(!p) return;
+            const p = allProducts.find(prod => prod.id === id); if(!p) return;
             document.getElementById("edit-prod-id").value = p.id;
             document.getElementById("edit-prod-status").value = p.status;
             document.getElementById("edit-name").value = p.name;
@@ -591,139 +746,51 @@
             document.getElementById("edit-price").value = p.price;
             document.getElementById("edit-cost").value = p.cost;
             document.getElementById("edit-note").value = p.note || "";
-            document.getElementById("edit-img-preview").src = p.imageUrl;
             
-            editBase64Image = ""; editImageName = "";
-            document.getElementById("edit-image-file").value = "";
-
-            if (p.stock === -1) {
+            if(p.stock === -1) {
                 document.getElementById("edit-stock-mode").value = "-1";
                 document.getElementById("edit-days").value = p.daysRequired;
-                document.getElementById("edit-stock").value = "10";
                 toggleStockInput("-1", "edit-stock-box", "edit-days-box");
             } else {
                 document.getElementById("edit-stock-mode").value = "0";
                 document.getElementById("edit-stock").value = p.stock;
-                document.getElementById("edit-days").value = "3";
                 toggleStockInput("0", "edit-stock-box", "edit-days-box");
             }
+            
+            document.getElementById("edit-img-preview").src = p.imageUrl ? p.imageUrl : defaultPlaceholderSvg;
+            editBase64Image = ""; editImageName = "";
             document.getElementById("edit-modal").classList.remove("hidden");
         }
 
         function closeEditModal() { document.getElementById("edit-modal").classList.add("hidden"); }
 
-        // 送出修改商品資訊
         function submitEditProduct() {
-            const btn = document.getElementById("btn-save-edit"); btn.disabled = true; btn.innerText = "正在儲存變更...";
+            const btn = document.getElementById("btn-save-edit"); btn.disabled = true; btn.innerText = "覆寫大盤中...";
+            const mode = document.getElementById("edit-stock-mode").value;
             
             const payload = {
                 action: "editProduct",
                 id: document.getElementById("edit-prod-id").value,
+                status: document.getElementById("edit-prod-status").value,
                 name: document.getElementById("edit-name").value.trim(),
                 category: document.getElementById("edit-category").value,
-                price: Number(document.getElementById("edit-price").value),
-                cost: Number(document.getElementById("edit-cost").value),
-                stockMode: document.getElementById("edit-stock-mode").value,
-                daysRequired: Number(document.getElementById("edit-days").value),
-                stock: Number(document.getElementById("edit-stock").value),
+                price: document.getElementById("edit-price").value,
+                cost: document.getElementById("edit-cost").value,
+                daysRequired: mode === "-1" ? document.getElementById("edit-days").value : "0",
+                stock: mode === "-1" ? "-1" : document.getElementById("edit-stock").value,
                 note: document.getElementById("edit-note").value.trim(),
-                status: document.getElementById("edit-prod-status").value,
-                imageData: editBase64Image,
-                imageName: editImageName
+                imageBlob: editBase64Image, imageName: editImageName
             };
 
             fetch(GAS_API, { method: "POST", body: JSON.stringify(payload) }).then(res => res.json()).then(res => {
-                alert(res.message); closeEditModal(); btn.disabled = false; btn.innerText = "儲存修改"; refreshData();
+                alert(res.message); btn.disabled = false; btn.innerText = "儲存修改"; closeEditModal(); refreshData();
             });
         }
 
-        // 上架全新商品
-        function uploadAndAddProduct() {
-            const name = document.getElementById("new-name").value.trim();
-            const cat = document.getElementById("new-category").value;
-            const price = Number(document.getElementById("new-price").value);
-            const cost = Number(document.getElementById("new-cost").value);
-            const mode = document.getElementById("stock-mode").value;
-            const days = Number(document.getElementById("new-days").value);
-            const stock = Number(document.getElementById("new-stock").value);
-            const note = document.getElementById("new-note").value.trim();
-
-            if(!name || !price) { alert("品名與售價為必填欄位！"); return; }
-            if(!base64Image) { alert("請務必選擇一張產品照片檔案！"); return; }
-
-            const btn = document.getElementById("btn-add-prod"); btn.disabled = true; btn.innerText = "正在上傳產品圖與建立資料...";
-
-            const payload = {
-                action: "addProduct", name: name, category: cat, price: price, cost: cost,
-                stockMode: mode, daysRequired: days, stock: stock, note: note,
-                imageData: base64Image, imageName: imageName
-            };
-
-            fetch(GAS_API, { method: "POST", body: JSON.stringify(payload) }).then(res => res.json()).then(res => {
-                alert(res.message); btn.disabled = false; btn.innerText = "確認上架";
-                document.getElementById("new-name").value = "";
-                document.getElementById("new-price").value = "";
-                document.getElementById("new-cost").value = "";
-                document.getElementById("new-note").value = "";
-                document.getElementById("new-image-file").value = "";
-                base64Image = ""; imageName = "";
-                refreshData();
-            });
-        }
-
-        // 條碼掃描核心
-        let html5QrcodeScanner = null;
-        function startScan() {
-            if(!html5QrcodeScanner) {
-                html5QrcodeScanner = new Html5Qrcode("reader");
-            }
-            html5QrcodeScanner.start(
-                { facingMode: "environment" },
-                { fps: 10, qrbox: { width: 250, height: 250 } },
-                (qrText) => {
-                    html5QrcodeScanner.stop();
-                    fetchOrderDetails(qrText);
-                },
-                (err) => {}
-            ).catch(err => alert("相機啟動失敗，請檢查權限！"));
-        }
-
-        // 撈取單筆訂單詳情
-        function fetchOrderDetails(orderId) {
-            const target = orderId.trim(); if(!target) return;
-            const o = allOrders.find(item => item.id === target);
-            if(!o) { alert("找不到該筆線上預訂單號！"); return; }
-            
-            document.getElementById("det-id").innerText = o.id;
-            document.getElementById("det-status").innerText = o.status;
-            document.getElementById("det-status").className = o.status === "已完成" ? 
-                "px-2 py-0.5 rounded text-[10px] font-bold bg-green-950 text-green-400" : 
-                "px-2 py-0.5 rounded text-[10px] font-bold bg-yellow-950 text-yellow-400";
-            
-            document.getElementById("det-items").innerText = o.items;
-            document.getElementById("det-amount").innerText = o.amount;
-            document.getElementById("det-date").innerText = o.pickupDate;
-            document.getElementById("det-payment").innerText = o.paymentMethod || "未定義";
-            document.getElementById("det-note").innerText = o.note || "無";
-            
-            const btn = document.getElementById("btn-complete-order");
-            if(o.status === "已完成") {
-                btn.disabled = true; btn.className = "w-full bg-gray-700 text-gray-500 py-2 rounded-xl text-xs"; btn.innerText = "此訂單已於現場交貨完成";
-            } else {
-                btn.disabled = false; btn.className = "w-full bg-green-600 text-white py-2 rounded-xl font-bold hover:bg-green-700 text-xs"; btn.innerText = "確認現場收款與交貨";
-            }
-            document.getElementById("order-detail-box").classList.remove("hidden");
-        }
-
-        // 線上預訂單現場交貨核銷
-        function completeOrder() {
-            const id = document.getElementById("det-id").innerText; if(!id) return;
-            const btn = document.getElementById("btn-complete-order"); btn.disabled = true; btn.innerText = "核銷更新中...";
-            
-            fetch(GAS_API, { method: "POST", body: JSON.stringify({ action: "completeOrder", id: id, username: currentStaff }) })
-            .then(res => res.json()).then(res => {
-                alert(res.message); document.getElementById("order-detail-box").classList.add("hidden"); refreshData();
-            });
+        function deleteProduct(id) {
+            if(!confirm("確定要永久下架並移除此商品主檔嗎？")) return;
+            fetch(GAS_API, { method: "POST", body: JSON.stringify({ action: "deleteProduct", id: id }) })
+            .then(res => res.json()).then(res => { alert(res.message); refreshData(); });
         }
     </script>
 </body>
